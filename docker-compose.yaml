@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:18.1-alpine
+    container_name: axum-postgres
+    shm_size: 128mb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: dolto
+      POSTGRES_DB: dolto
+      POSTGRES_PASSWORD: dolto
+    networks: 
+      - backend
+
+  axum-dev:
+    depends_on:
+      - db
+    build:
+      context: ./axum_project
+      dockerfile: Dockerfile
+    image: axum:dev
+    container_name: axum-dev
+    volumes:
+      - ./axum_project:/home/app
+    environment:
+      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    ports: 
+      - 8080:8000
+    networks: 
+      - backend
+      
+volumes:
+  db-data:
+    name: axum-postgres-db-data
+    
+networks:
+  backend:
+    name: axum-backend-network
+    driver: bridge
