@@ -29,3 +29,29 @@
 ### 소스코드
 - axum_project/axum-project 에서 수정 가능
 - db/ 에 각종 마이그레이션용 sql을 넣는 형태로 하거나, 볼륨의 덤프를 저장할 예정
+
+#### 라우터와 핸들러 공부 소스
+- /router/user/mod.rs
+##### URL 파라메터
+- Path, Query(HashMap, Struct)
+##### Body
+- Text, Json, Form, FormData (file)
+
+#### 테스트 curl 정보
+```sh
+  curl -X GET "http://localhost:8080/"
+  curl -X POST "http://localhost:8080/"
+  curl -X PUT "http://localhost:8080/"
+  curl -X DELETE "http://localhost:8080/"
+
+  curl -X GET http://localhost:8080/api/user/1/dolto
+  curl -X GET "http://localhost:8080/api/user?id=12&name=dolto"
+
+  curl -X POST "http://localhost:8080/api/user/hello_text" -d "dolto"
+  curl -X POST "http://localhost:8080/api/user/hello_bytes" -d "dolto"
+
+  curl -X POST "http://localhost:8080/api/user/hello_json" -H "Content-Type: application/json" -d '{"name":"dolto"}'
+  curl -X POST "http://localhost:8080/api/user/hello_form" -H "Content-Type: application/x-www-form-urlencoded" -d "name=dolto"
+
+  curl -X POST "http://localhost:8080/api/user/hello_file" -F "readme.md=@Readme.md" -F "dolto=dolto"
+```
