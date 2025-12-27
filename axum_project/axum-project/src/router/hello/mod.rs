@@ -1,9 +1,13 @@
-use std::collections::HashMap;
+mod state;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use axum::{
-    Form, Json, Router,
+    Extension, Form, Json, Router,
     body::Bytes,
-    extract::{Multipart, Path, Query},
+    extract::{Multipart, Path, Query, State},
     http::{
         HeaderMap, StatusCode,
         header::{CONTENT_TYPE, USER_AGENT},
@@ -16,6 +20,8 @@ use axum_extra::{
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
+
+use state::*;
 
 // url 경로상 데이터를 받는 방법
 async fn path_query(Path((id, name)): Path<(i32, String)>) -> String {
@@ -50,6 +56,8 @@ async fn param_query_with_struct(Query(user): Query<User>) -> String {
 }
 
 // http body의 데이터를 받는 방법
+// 주의할점은 body의 경우 핸들러의 마지막 매개변수이자 단 하나만 존재하도록 강제한다
+// http 요청 본문을 한번만 읽어서 순서대로 적제하기 때문
 async fn body_query_text(name: String) -> String {
     format!("Hello {}\n", name)
 }
@@ -177,6 +185,24 @@ async fn response_base_rest_api() -> (TypedHeader<ContentType>, (StatusCode, Str
 //     )
 // }
 
+async fn state_base_counter(State(data): State<Arc<Mutex<Vec<i32>>>>) -> String {
+    let mut data = data.lock().unwrap();
+    data[0] += 1;
+
+    format!("Hello {}Times Again!\n", data[0])
+}
+
+async fn state_appdata_name(State(data): State<HelloAppState>) -> String {
+    format!("{}\n", data.auth_token)
+}
+async fn state_appdata_users(State(data): State<HelloAppState>) -> String {
+    format!("{}\n", data.current_users)
+}
+// extension도 값은 무조건 Clone으로 가져와서 값 변경 안됨
+async fn extension_appdata_users(Extension(mut data): Extension<HelloAppState>) -> String {
+    data.current_users += 1;
+    format!("{}\n", data.current_users)
+}
 pub fn hello_router() -> Router {
     let hello_router = Router::new()
         .route("/param1", get(param_query_with_hashmap))
@@ -191,7 +217,18 @@ pub fn hello_router() -> Router {
         .route("/header2", get(header_hello2))
         .route("/json_response", get(response_json))
         .route("/status_code", get(response_status_code))
-        .route("/rest_api", get(response_base_rest_api));
+        .route("/rest_api", get(response_base_rest_api))
+        // 라우터에서 상태에 대한 정보를 넘기는 방법은 다음과 같다
+        // 상태 관리를 위해서 가져오는 데이터
+        // 물론 각 요청별로 상태를 다르게 하기 위해서 get(함수명).with_state() 도 가능하다
+        // route뒤의 with_state는 마지막 with_state에 따라서 그 위의 route된 모든 함수에 대응한다
+        .route("/state_count", get(state_base_counter))
+        .with_state(get_base_state())
+        .route("/state_app_name", get(state_appdata_name))
+        .route("/state_app_users", get(state_appdata_users))
+        .with_state(get_hello_app_state())
+        .route("/extension_users", get(extension_appdata_users))
+        .layer(Extension(get_hello_app_state()));
 
     hello_router
 }
