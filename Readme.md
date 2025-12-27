@@ -72,4 +72,10 @@
 
   # Rest API Response (Header ,(StatusCode, Data))
   curl -X GET "http://localhost:8080/hello/rest_api" -i
+
+  # State
+  curl -X GET "http://localhost:8080/hello/state_count"
+  curl -X GET "http://localhost:8080/hello/state_app_name"
+  curl -X GET "http://localhost:8080/hello/state_app_users"
+  curl -X GET "http://localhost:8080/hello/extension_users"
 ```
