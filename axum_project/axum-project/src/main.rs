@@ -1,10 +1,7 @@
 mod router;
 
-use crate::router::user::*;
-use axum::{
-    Router,
-    routing::{delete, get, post, put},
-};
+use crate::router::{hello::*, user::*};
+use axum::{Router, routing::get};
 
 #[tokio::main]
 async fn main() {
@@ -18,12 +15,16 @@ async fn main() {
 
     let temps_router = Router::new().route("/", get(|| async move { "Temps Get\n" }));
 
+    let hello_router = hello_router();
+
     let api_router = Router::new()
         .route("/", get(|| async move { "Api Get\n" }))
         .nest("/user", user_route())
         .nest("/temps", temps_router);
 
-    let app = base_router.nest("/api", api_router);
+    let app = base_router
+        .nest("/api", api_router)
+        .nest("/hello", hello_router);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
     axum::serve(listener, app).await.unwrap();

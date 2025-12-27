@@ -39,19 +39,37 @@
 
 #### 테스트 curl 정보
 ```sh
+  # 기본 요청
   curl -X GET "http://localhost:8080/"
   curl -X POST "http://localhost:8080/"
   curl -X PUT "http://localhost:8080/"
   curl -X DELETE "http://localhost:8080/"
 
-  curl -X GET http://localhost:8080/api/user/1/dolto
-  curl -X GET "http://localhost:8080/api/user?id=12&name=dolto"
+  # Path & Parameter
+  curl -X GET "http://localhost:8080/hello/path/1/dolto"
+  curl -X GET "http://localhost:8080/hello/param1?id=12&name=dolto"
+  curl -X GET "http://localhost:8080/hello/param2?id=22&name=dolto"
 
-  curl -X POST "http://localhost:8080/api/user/hello_text" -d "dolto"
-  curl -X POST "http://localhost:8080/api/user/hello_bytes" -d "dolto"
+  # Body Text & Bytes
+  curl -X POST "http://localhost:8080/hello/text" -d "dolto"
+  curl -X POST "http://localhost:8080/hello/bytes" -d "dolto"
 
-  curl -X POST "http://localhost:8080/api/user/hello_json" -H "Content-Type: application/json" -d '{"name":"dolto"}'
-  curl -X POST "http://localhost:8080/api/user/hello_form" -H "Content-Type: application/x-www-form-urlencoded" -d "name=dolto"
+  # Body Json & Form
+  curl -X POST "http://localhost:8080/hello/json" -H "Content-Type: application/json" -d '{"name":"dolto"}'
+  curl -X POST "http://localhost:8080/hello/form" -H "Content-Type: application/x-www-form-urlencoded" -d "name=dolto"
 
-  curl -X POST "http://localhost:8080/api/user/hello_file" -F "readme.md=@Readme.md" -F "dolto=dolto"
+  # Body FormData (file & Form)
+  curl -X POST "http://localhost:8080/hello/file" -F "readme.md=@Readme.md" -F "dolto=dolto"
+
+  # Header
+  curl -X GET "http://localhost:8080/hello/header" -H "Content-Type: text/plain" -d "dolto"
+
+  # Json Response
+  curl -X GET "http://localhost:8080/hello/json_response"
+
+  # StatusCode Response
+  curl -X GET "http://localhost:8080/hello/status_code" -i
+
+  # Rest API Response (Header ,(StatusCode, Data))
+  curl -X GET "http://localhost:8080/hello/rest_api" -i
 ```
