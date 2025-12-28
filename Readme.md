@@ -14,6 +14,7 @@
 - Docker (Docker compose V2)
 - Axum
 - SeaORM
+- Postgresql
 
 #### Management
 - Git (Obviously)
