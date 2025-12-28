@@ -1,4 +1,9 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
+use axum::body::Bytes;
 
 pub fn get_base_state() -> Arc<Mutex<Vec<i32>>> {
     Arc::new(Mutex::new(vec![0; 3]))
@@ -16,6 +21,10 @@ pub fn get_hello_app_state() -> HelloAppState {
         auth_token: "auth_token".to_string(),
         current_users: 3,
     }
+}
+
+pub fn get_proxy_state() -> Arc<Mutex<HashMap<String, (Bytes, usize)>>> {
+    Arc::new(Mutex::new(HashMap::new()))
 }
 
 // 난 안쓸 것 같지만 mecros features에는

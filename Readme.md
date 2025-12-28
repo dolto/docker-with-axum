@@ -36,6 +36,8 @@
 - Path, Query(HashMap, Struct)
 ##### Body
 - Text, Json, Form, FormData (file)
+##### Debug 를 위한 #[debug_handler]
+- 핸들러 함수에 다음 어노테이션을 걸면, 컴파일시 발생하는 에러를 더 명확하게 알 수 있다
 
 #### 테스트 curl 정보
 ```sh
@@ -78,4 +80,7 @@
   curl -X GET "http://localhost:8080/hello/state_app_name"
   curl -X GET "http://localhost:8080/hello/state_app_users"
   curl -X GET "http://localhost:8080/hello/extension_users"
+
+  # Hello Proxy
+  curl -X POST "http://localhost:8080/hello/proxy" -H "Content-Type: application/json" -d '{"breed":"chihuahua", "num_pics":3}'
 ```
