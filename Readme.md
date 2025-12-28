@@ -31,7 +31,7 @@
 - db/ 에 각종 마이그레이션용 sql을 넣는 형태로 하거나, 볼륨의 덤프를 저장할 예정
 
 #### 라우터와 핸들러 공부 소스
-- /router/user/mod.rs
+- /axum_project/axum-project/src/router/user/mod.rs
 ##### URL 파라메터
 - Path, Query(HashMap, Struct)
 ##### Body
@@ -83,4 +83,27 @@
 
   # Hello Proxy
   curl -X POST "http://localhost:8080/hello/proxy" -H "Content-Type: application/json" -d '{"breed":"chihuahua", "num_pics":3}'
+```
+
+#### SeaORM 마이그레이션 위치
+- /db/migrate
+
+#### SeaORM 으로 생성된 데이터 모델
+- /axum_project/axum-project/src/entities
+
+##### sea-orm-cli 실행 컨테이너
+- DB는 로컬과 포트연결이 되어있지 않기 때문에 같은 networks에 연결된 컨테이너를 생성한다
+- 기반 이미지 Dockerfile ```/db/Dockerfile```
+- 마이그레이션 up을 해야 이미지를 빌드하기 때문에 최초 마이그레이션은 해야한다
+```sh
+  docker compose run --rm sea-orm-upper
+```
+- 그 이후로는 필요에 따라 실행하면된다
+```sh
+  # 마이그레이션 적용 sea-orm-cli migrate up
+  docker compose run --rm sea-orm-upper
+  # 마이그레이션 롤백(마지막 마이그레이션) sea-orm-cli migrate down
+  docker compose run --rm sea-orm-downer
+  # 마이그레이션 모델 생성 sea-orm-cli generate entity -o src/entities
+  docker compose run --rm sea-orm-entity
 ```

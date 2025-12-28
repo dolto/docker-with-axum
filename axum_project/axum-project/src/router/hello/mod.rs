@@ -26,7 +26,6 @@ use std::fmt::Write;
 use state::*;
 
 // url 경로상 데이터를 받는 방법
-
 #[debug_handler]
 async fn path_query(Path((id, name)): Path<(i32, String)>) -> String {
     format!("{} : {}\n", id, name)

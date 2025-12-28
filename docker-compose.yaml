@@ -28,7 +28,51 @@ services:
       - 8080:8000
     networks: 
       - backend
+
+# CMD ["cargo", "run", "--manifest-path", "./migration/Cargo.toml", "--", "up"]
+  sea-orm-upper:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    image: sea-orm:dev
+    profiles: ["migration-up"]
+    container_name: sea-orm-upper
+    working_dir: /home/app
+    command: ["sea-orm-cli", "migrate", "up"]
+    volumes:
+      - ./db:/home/app
+    environment:
+      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    networks:
+      - backend
       
+# cargo run --manifest-path ./migration/Cargo.toml -- down -n 1
+  sea-orm-downer:
+    image: sea-orm:dev
+    profiles: ["migration-downer"]
+    container_name: sea-orm-downer
+    working_dir: /home/app
+    command: ["sea-orm-cli", "migrate", "down"]
+    volumes:
+      - ./db:/home/app
+    environment:
+      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    networks:
+      - backend
+
+  sea-orm-entity:
+    image: sea-orm:dev
+    profiles: ["generation-entity"]
+    container_name: sea-orm-entity
+    working_dir: /home/app
+    command: ["sea-orm-cli", "generate", "entity", "-o", "src/entities"]
+    volumes:
+      - ./axum_project/axum-project:/home/app
+    environment:
+      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    networks:
+      - backend
+
 volumes:
   db-data:
     name: axum-postgres-db-data
