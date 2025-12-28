@@ -9,6 +9,51 @@
 #### Editor
 - Helix
 
+#### Language and Framework
+- Rust
+- Docker (Docker compose V2)
+- Axum
+- SeaORM
+
+#### Management
+- Git (Obviously)
+
+#### 프로젝트 구조
+```sh
+├── Readme.md
+├── axum_project
+│   ├── Dockerfile
+│   └── axum-project
+│       ├── Cargo.lock
+│       ├── Cargo.toml
+│       └── src
+│           ├── entities
+│           │   ├── category.rs
+│           │   ├── mod.rs
+│           │   ├── prelude.rs
+│           │   ├── product.rs
+│           │   └── users.rs
+│           ├── main.rs
+│           └── router
+│               ├── hello
+│               │   ├── mod.rs
+│               │   └── state.rs
+│               ├── mod.rs
+│               └── user
+│                   └── mod.rs
+├── db
+│   ├── Dockerfile
+│   └── migration
+│       ├── Cargo.lock
+│       ├── Cargo.toml
+│       ├── README.md
+│       └── src
+│           ├── lib.rs
+│           ├── m20251228_110826_create_table.rs
+│           └── main.rs
+└── docker-compose.yaml
+```
+
 ### 프로젝트 초기 설정(초본)
 1. ```docker compose --file docker-compose.yaml up --detach```
 2. 생성된 컨테이너 두개를 확인
@@ -24,11 +69,10 @@
   alter database axum owner to axum;
   \q
 ```
-4. 코드를 수정하고, 핫 리로드 되는지 테스트도 해보자
 
 ### 소스코드
 - axum_project/axum-project 에서 수정 가능
-- db/ 에 각종 마이그레이션용 sql을 넣는 형태로 하거나, 볼륨의 덤프를 저장할 예정
+- db/ 마이그레이션 코드
 
 #### 라우터와 핸들러 공부 소스
 - /axum_project/axum-project/src/router/user/mod.rs
