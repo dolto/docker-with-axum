@@ -1,3 +1,4 @@
+mod database;
 mod state;
 use std::{
     collections::HashMap,

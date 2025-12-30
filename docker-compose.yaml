@@ -65,7 +65,7 @@ services:
     profiles: ["generation-entity"]
     container_name: sea-orm-entity
     working_dir: /home/app
-    command: ["sea-orm-cli", "generate", "entity", "-o", "src/entities"]
+    command: ["sea-orm-cli", "generate", "entity", "-o", "src/entities", "--with-serde", "both"]
     volumes:
       - ./axum_project/axum-project:/home/app
     environment:
