@@ -21,6 +21,7 @@
 
 #### 프로젝트 구조
 ```sh
+.
 ├── Readme.md
 ├── axum_project
 │   ├── Dockerfile
@@ -28,20 +29,10 @@
 │       ├── Cargo.lock
 │       ├── Cargo.toml
 │       └── src
+│           ├── database.rs
 │           ├── entities
-│           │   ├── category.rs
-│           │   ├── mod.rs
-│           │   ├── prelude.rs
-│           │   ├── product.rs
-│           │   └── users.rs
 │           ├── main.rs
 │           └── router
-│               ├── hello
-│               │   ├── mod.rs
-│               │   └── state.rs
-│               ├── mod.rs
-│               └── user
-│                   └── mod.rs
 ├── db
 │   ├── Dockerfile
 │   └── migration
@@ -128,6 +119,25 @@
 
   # Hello Proxy
   curl -X POST "http://localhost:8080/hello/proxy" -H "Content-Type: application/json" -d '{"breed":"chihuahua", "num_pics":3}'
+
+  # Hello User Database
+  # Insert
+  curl -X GET "http://localhost:8080/hello/db/insert?command=one1" -i
+  curl -X GET "http://localhost:8080/hello/db/insert?command=one2" -i
+  curl -X GET "http://localhost:8080/hello/db/insert?command=many" -i
+
+  # Select
+  curl -X GET "http://localhost:8080/hello/db/select/true" -i
+  curl -X GET "http://localhost:8080/hello/db/select/false" -i
+
+  # Update
+  curl -X GET "http://localhost:8080/hello/db/update/true" -i
+  curl -X GET "http://localhost:8080/hello/db/update/false" -i
+
+  # Delete
+  curl -X GET "http://localhost:8080/hello/db/delete?command=one1" -i
+  curl -X GET "http://localhost:8080/hello/db/delete?command=one2" -i
+  curl -X GET "http://localhost:8080/hello/db/delete?command=many" -i
 ```
 
 #### SeaORM 마이그레이션 위치
