@@ -3,9 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use axum::body::Bytes;
+use axum::{body::Bytes, extract::FromRef};
+use sea_orm::DatabaseConnection;
 
-pub fn get_base_state() -> Arc<Mutex<Vec<i32>>> {
+fn get_base_state() -> Arc<Mutex<Vec<i32>>> {
     Arc::new(Mutex::new(vec![0; 3]))
 }
 
@@ -23,10 +24,26 @@ pub fn get_hello_app_state() -> HelloAppState {
     }
 }
 
-pub fn get_proxy_state() -> Arc<Mutex<HashMap<String, (Bytes, usize)>>> {
+fn get_proxy_state() -> Arc<Mutex<HashMap<String, (Bytes, usize)>>> {
     Arc::new(Mutex::new(HashMap::new()))
 }
 
+#[derive(Clone, Debug, FromRef)]
+pub struct HelloState {
+    hello_app_state: HelloAppState,
+    base_state: Arc<Mutex<Vec<i32>>>,
+    proxy_state: Arc<Mutex<HashMap<String, (Bytes, usize)>>>,
+    pool: DatabaseConnection,
+}
+
+pub fn get_hello_state(pool: DatabaseConnection) -> HelloState {
+    HelloState {
+        hello_app_state: get_hello_app_state(),
+        base_state: get_base_state(),
+        proxy_state: get_proxy_state(),
+        pool,
+    }
+}
 // 난 안쓸 것 같지만 mecros features에는
 // 데이터 구조체의 각 필드만 따로 받는 기능이 있다
 // FromRef라는 어노테이션을 사용하면 된다

@@ -21,10 +21,20 @@ use axum_extra::{
     headers::{ContentType, UserAgent},
 };
 use reqwest::Client;
+use sea_orm::{DatabaseConnection, DbErr};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 
 use state::*;
+
+use crate::{
+    entities::users,
+    router::hello::database::{
+        hello_delete_by_id, hello_delete_by_model, hello_delete_many, hello_insert_many,
+        hello_insert_one1, hello_insert_one2, hello_select_all, hello_select_limit,
+        hello_select_one, hello_update_many, hello_update_one,
+    },
+};
 
 // url 경로상 데이터를 받는 방법
 #[debug_handler]
@@ -279,7 +289,126 @@ async fn hello_proxy(
     );
     (StatusCode::from_u16(code).unwrap(), body)
 }
-pub fn hello_router() -> Router {
+
+#[debug_handler]
+async fn hello_user_select(
+    Path(is_all): Path<bool>,
+    State(pool): State<DatabaseConnection>,
+) -> Json<Vec<users::Model>> {
+    if is_all {
+        return Json(hello_select_all(&pool).await);
+    }
+
+    Json(vec![hello_select_one(&pool).await])
+}
+
+#[derive(Deserialize)]
+struct HelloUserSelectLimitCommand {
+    limit: u64,
+}
+#[debug_handler]
+async fn hello_user_select_limit(
+    Query(limit): Query<HelloUserSelectLimitCommand>,
+    State(pool): State<DatabaseConnection>,
+) -> Json<Vec<users::Model>> {
+    Json(hello_select_limit(&pool, limit.limit).await)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum HelloUserExec {
+    One1,
+    One2,
+    Many,
+}
+
+#[derive(Deserialize)]
+struct HelloUserExecCommand {
+    command: HelloUserExec,
+}
+#[debug_handler]
+async fn hello_user_insert(
+    Query(command): Query<HelloUserExecCommand>,
+    State(pool): State<DatabaseConnection>,
+) -> StatusCode {
+    match command.command {
+        HelloUserExec::One1 => {
+            let res = hello_insert_one1(&pool).await;
+            if res.is_ok() {
+                return StatusCode::CREATED;
+            }
+            if let Err(err) = res {
+                println!("{:?}", err);
+            }
+        }
+        HelloUserExec::One2 => {
+            let res = hello_insert_one2(&pool).await;
+            if res.is_ok() {
+                return StatusCode::CREATED;
+            }
+            if let Err(err) = res {
+                println!("{:?}", err);
+            }
+        }
+        HelloUserExec::Many => {
+            let res = hello_insert_many(&pool).await;
+            if res.is_ok() {
+                return StatusCode::CREATED;
+            }
+            if let Err(err) = res {
+                println!("{:?}", err);
+            }
+        }
+    }
+
+    StatusCode::INTERNAL_SERVER_ERROR
+}
+
+#[debug_handler]
+async fn hello_user_update(
+    Path(is_all): Path<bool>,
+    State(pool): State<DatabaseConnection>,
+) -> StatusCode {
+    if is_all {
+        let res = hello_update_one(&pool).await;
+        if res.is_ok() {
+            return StatusCode::OK;
+        }
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    let res = hello_update_many(&pool).await;
+    if res.is_ok() {
+        return StatusCode::OK;
+    }
+    StatusCode::INTERNAL_SERVER_ERROR
+}
+
+#[debug_handler]
+async fn hello_user_delete(
+    Query(command): Query<HelloUserExecCommand>,
+    State(pool): State<DatabaseConnection>,
+) -> StatusCode {
+    let is_ok;
+    match command.command {
+        HelloUserExec::One1 => {
+            is_ok = hello_delete_by_id(&pool).await.is_ok();
+        }
+        HelloUserExec::One2 => {
+            is_ok = hello_delete_by_model(&pool).await.is_ok();
+        }
+        HelloUserExec::Many => {
+            is_ok = hello_delete_many(&pool).await.is_ok();
+        }
+    }
+
+    if is_ok {
+        StatusCode::OK
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+pub fn hello_router(pool: DatabaseConnection) -> Router {
     let hello_router = Router::new()
         .route("/param1", get(param_query_with_hashmap))
         .route("/param2", get(param_query_with_struct))
@@ -299,16 +428,24 @@ pub fn hello_router() -> Router {
         // 물론 각 요청별로 상태를 다르게 하기 위해서 get(함수명).with_state() 도 가능하다
         // route뒤의 with_state는 마지막 with_state에 따라서 그 위의 route된 모든 함수에 대응한다
         .route("/state_count", get(state_base_counter))
-        .with_state(get_base_state())
+        // .with_state(get_base_state())
         .route("/state_app_name", get(state_appdata_name))
         .route("/state_app_users", get(state_appdata_users))
-        .with_state(get_hello_app_state())
+        // .with_state(get_hello_app_state())
         // 권장하지 않는 방식의 상태관리법 (구버전)
         .route("/extension_users", get(extension_appdata_users))
         .layer(Extension(get_hello_app_state()))
         // 프록시 서버
         .route("/proxy", post(hello_proxy))
-        .with_state(get_proxy_state());
+        // .with_state(get_proxy_state());
+        .route("/db/select", get(hello_user_select_limit))
+        .route("/db/select/{is_all}", get(hello_user_select))
+        .route("/db/insert", get(hello_user_insert))
+        .route("/db/update/{is_all}", get(hello_user_update))
+        .route("/db/delete", get(hello_user_delete))
+        .with_state(get_hello_state(pool));
 
+    // 상태관리의 경우 마지막 상태가 확정된 상태이므로,
+    // 가능하면 서브트리당 하나만 쓰거나 부모 트리를 상속받아야한다
     hello_router
 }

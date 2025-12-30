@@ -3,63 +3,62 @@ use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{self, NotSet, Set},
     ColumnTrait, DatabaseConnection, DbErr, EntityTrait, InsertResult, IntoActiveModel,
-    QueryFilter, QueryOrder, QuerySelect, RuntimeErr, SqlErr, UpdateResult,
+    QueryFilter, QueryOrder, QuerySelect, UpdateResult,
     prelude::Expr,
-    sqlx,
 };
 
 // DbErr에 대해서
-pub async fn hello_db_err(conn: &DatabaseConnection) {
-    let res = hello_insert_one1(conn).await;
+// pub async fn hello_db_err(conn: &DatabaseConnection) {
+//     let res = hello_insert_one1(conn).await;
 
-    match res {
-        Ok(user) => {
-            println!("{:?}", user);
-        }
-        // 공부용이라 sql_err와 exec(runtimeerr)를 둘 다 이용했지만
-        // 에러를 바라보는 관점에 따라 하나만 만들어야한다
-        Err(err) => {
-            // sql_err를 통해 가져온 에러로, 의미있는 DB제약 위반을 골라서 처리
-            // 주로 비즈니스 로직에대한 판단
-            match err.sql_err() {
-                Some(err) => match err {
-                    SqlErr::UniqueConstraintViolation(detail) => {
-                        println!("{}", detail);
-                    }
-                    SqlErr::ForeignKeyConstraintViolation(detail) => {
-                        println!("{}", detail);
-                    }
-                    _ => {
-                        println!("{:?}", err);
-                    }
-                },
-                None => {}
-            }
+//     match res {
+//         Ok(user) => {
+//             println!("{:?}", user);
+//         }
+//         // 공부용이라 sql_err와 exec(runtimeerr)를 둘 다 이용했지만
+//         // 에러를 바라보는 관점에 따라 하나만 만들어야한다
+//         Err(err) => {
+//             // sql_err를 통해 가져온 에러로, 의미있는 DB제약 위반을 골라서 처리
+//             // 주로 비즈니스 로직에대한 판단
+//             match err.sql_err() {
+//                 Some(err) => match err {
+//                     SqlErr::UniqueConstraintViolation(detail) => {
+//                         println!("{}", detail);
+//                     }
+//                     SqlErr::ForeignKeyConstraintViolation(detail) => {
+//                         println!("{}", detail);
+//                     }
+//                     _ => {
+//                         println!("{:?}", err);
+//                     }
+//                 },
+//                 None => {}
+//             }
 
-            // 시스템/인프라에 대한 판단 (에러 추적)
-            match err {
-                // SeaORM에서 생성된 에러를 처리
-                DbErr::Exec(RuntimeErr::Internal(details)) => {
-                    println!("{}", details);
-                }
-                // 쿼리 수행중 발생하는 에러를 처리
-                DbErr::Exec(RuntimeErr::SqlxError(error)) => match error {
-                    sqlx::Error::Database(db_error) => {
-                        if let Some(code) = db_error.code() {
-                            match code.as_ref() {
-                                "23505" => println!("Unique constraint violation"),
-                                "23503" => println!("Foreign key constraint violation"),
-                                _ => println!("Other database error: {}", code),
-                            }
-                        }
-                    }
-                    _ => println!("Other SQLx error: {:?}", error),
-                },
-                _ => {}
-            }
-        }
-    }
-}
+//             // 시스템/인프라에 대한 판단 (에러 추적)
+//             match err {
+//                 // SeaORM에서 생성된 에러를 처리
+//                 DbErr::Exec(RuntimeErr::Internal(details)) => {
+//                     println!("{}", details);
+//                 }
+//                 // 쿼리 수행중 발생하는 에러를 처리
+//                 DbErr::Exec(RuntimeErr::SqlxError(error)) => match error {
+//                     sqlx::Error::Database(db_error) => {
+//                         if let Some(code) = db_error.code() {
+//                             match code.as_ref() {
+//                                 "23505" => println!("Unique constraint violation"),
+//                                 "23503" => println!("Foreign key constraint violation"),
+//                                 _ => println!("Other database error: {}", code),
+//                             }
+//                         }
+//                     }
+//                     _ => println!("Other SQLx error: {:?}", error),
+//                 },
+//                 _ => {}
+//             }
+//         }
+//     }
+// }
 
 // Entity는 DB의 레코드를 나타냄
 pub async fn hello_select_one(conn: &DatabaseConnection) -> users::Model {
@@ -84,11 +83,11 @@ pub async fn hello_select_all(conn: &DatabaseConnection) -> Vec<users::Model> {
     user
 }
 
-pub async fn hello_select_limit(conn: &DatabaseConnection) -> Vec<users::Model> {
+pub async fn hello_select_limit(conn: &DatabaseConnection, limit: u64) -> Vec<users::Model> {
     let user = users::Entity::find()
         .filter(users::Column::Id.gt(1))
         .order_by_asc(users::Column::Username)
-        .limit(10)
+        .limit(limit)
         .all(conn)
         .await
         .unwrap();
