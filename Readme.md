@@ -122,22 +122,49 @@
 
   # Hello User Database
   # Insert
-  curl -X GET "http://localhost:8080/hello/db/insert?command=one1" -i
-  curl -X GET "http://localhost:8080/hello/db/insert?command=one2" -i
-  curl -X GET "http://localhost:8080/hello/db/insert?command=many" -i
+  curl -i "http://localhost:8080/hello/db/insert?command=one1&username=user&password=pass1"
+  curl -i "http://localhost:8080/hello/db/insert?command=one2&username=user&password=pass2"
+  curl -i -X POST "http://localhost:8080/hello/db/insert_many" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"username":"erin","password":"pass5"},
+    {"username":"frank","password":"pass6"},
+    {"username":"gina","password":"pass7"}
+  ]'
 
   # Select
-  curl -X GET "http://localhost:8080/hello/db/select/true" -i
-  curl -X GET "http://localhost:8080/hello/db/select/false" -i
-
-  # Update
-  curl -X GET "http://localhost:8080/hello/db/update/true" -i
-  curl -X GET "http://localhost:8080/hello/db/update/false" -i
+  curl -X GET "http://localhost:8080/hello/db/select" -i
+  curl -X GET "http://localhost:8080/hello/db/select?id=1" -i
+  # 섞어 쓸 수도 있음
+  curl -X GET "http://localhost:8080/hello/db/select?like_user=dolto" -i
+  curl -X GET "http://localhost:8080/hello/db/select?like_pass=1234" -i
+  curl -i "http://localhost:8080/hello/db/select?gt_id=1&lt_id=10"
+  curl -i "http://localhost:8080/hello/db/select?limit=2"
+  
+  # Update (모델을 가져오든 id로 가져오든 결국 pk를 기준으로 변경하는듯)
+  curl -i -X POST "http://localhost:8080/hello/db/update/one1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model":  { "id": 23, "username": "alice", "password": "pass1" },
+    "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
+  }'
+  curl -i -X POST "http://localhost:8080/hello/db/update/one2" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model":  { "id": 23, "username": "alice", "password": "pass1" },
+    "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
+  }'
+  curl -i -X POST "http://localhost:8080/hello/db/update/many" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": { "id": 0, "username": "dummy", "password": "dummy" },
+    "change_model": { "id": 0, "username": "GLOBAL_UPDATED", "password": "global_pw" }
+  }'
 
   # Delete
-  curl -X GET "http://localhost:8080/hello/db/delete?command=one1" -i
-  curl -X GET "http://localhost:8080/hello/db/delete?command=one2" -i
-  curl -X GET "http://localhost:8080/hello/db/delete?command=many" -i
+  curl -i "http://localhost:8080/hello/db/delete/one1?id=1"
+  curl -i "http://localhost:8080/hello/db/delete/one2?username=name&password=pass2"
+  curl -i "http://localhost:8080/hello/db/delete/many"
 ```
 
 #### SeaORM 마이그레이션 위치

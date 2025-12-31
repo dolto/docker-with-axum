@@ -1,6 +1,7 @@
 // 책에는 안나왔지만 이걸 해야할 것 같은데?
 mod database;
 mod entities;
+mod errors;
 mod router;
 
 use crate::{

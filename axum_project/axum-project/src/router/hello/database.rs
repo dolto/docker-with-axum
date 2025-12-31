@@ -1,8 +1,9 @@
-use crate::entities::*;
+use crate::{entities::*, errors::AppError};
+use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{self, NotSet, Set},
-    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, InsertResult, IntoActiveModel,
+    ColumnTrait, Condition, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel,
     QueryFilter, QueryOrder, QuerySelect, UpdateResult,
     prelude::Expr,
 };
@@ -61,46 +62,49 @@ use sea_orm::{
 // }
 
 // Entity는 DB의 레코드를 나타냄
-pub async fn hello_select_one(conn: &DatabaseConnection) -> users::Model {
-    let user = users::Entity::find()
-        .filter(users::Column::Username.eq("dolto"))
-        .one(conn)
-        .await
-        .unwrap()
-        .unwrap();
+pub async fn hello_select_one(
+    conn: &DatabaseConnection,
+    id: i32,
+) -> Result<users::Model, AppError> {
+    let user = users::Entity::find_by_id(id).one(conn).await?;
 
-    user
+    if let Some(user) = user {
+        return Ok(user);
+    }
+
+    Err(AppError::new(StatusCode::BAD_REQUEST, "Can't find user id"))
 }
 
-pub async fn hello_select_all(conn: &DatabaseConnection) -> Vec<users::Model> {
-    let user = users::Entity::find()
-        .filter(users::Column::Id.gt(1))
-        .order_by_asc(users::Column::Username)
-        .all(conn)
-        .await
-        .unwrap();
+pub async fn hello_select_all(
+    conn: &DatabaseConnection,
+    filter: Condition,
+    limit: Option<u64>,
+) -> Result<Vec<users::Model>, AppError> {
+    let mut condition = Condition::all();
+    condition = condition.add(filter);
+    let mut user = users::Entity::find()
+        .filter(condition)
+        .order_by_asc(users::Column::Username);
 
-    user
-}
+    if let Some(limit) = limit {
+        user = user.limit(limit);
+    }
 
-pub async fn hello_select_limit(conn: &DatabaseConnection, limit: u64) -> Vec<users::Model> {
-    let user = users::Entity::find()
-        .filter(users::Column::Id.gt(1))
-        .order_by_asc(users::Column::Username)
-        .limit(limit)
-        .all(conn)
-        .await
-        .unwrap();
+    let user = user.all(conn).await?;
 
-    user
+    Ok(user)
 }
 
 // ActiveModel은 DB의 레코드를 삽입/수정 가능하게끔 해줌
-pub async fn hello_insert_one1(conn: &DatabaseConnection) -> Result<users::Model, DbErr> {
+pub async fn hello_insert_one1(
+    conn: &DatabaseConnection,
+    username: String,
+    password: String,
+) -> Result<users::Model, AppError> {
     let new_user = users::ActiveModel {
         id: NotSet,
-        username: Set("dolto".to_owned()),
-        password: Set("1234".to_owned()),
+        username: Set(username),
+        password: Set(password),
     }
     .insert(conn)
     .await?;
@@ -110,11 +114,13 @@ pub async fn hello_insert_one1(conn: &DatabaseConnection) -> Result<users::Model
 
 pub async fn hello_insert_one2(
     conn: &DatabaseConnection,
-) -> Result<InsertResult<users::ActiveModel>, DbErr> {
+    username: String,
+    password: String,
+) -> Result<InsertResult<users::ActiveModel>, AppError> {
     let new_user = users::ActiveModel {
         id: NotSet,
-        username: Set("Tomy".to_owned()),
-        password: Set("1234".to_owned()),
+        username: Set(username),
+        password: Set(password),
     };
     let result = users::Entity::insert(new_user).exec(conn).await?;
 
@@ -123,30 +129,13 @@ pub async fn hello_insert_one2(
 
 pub async fn hello_insert_many(
     conn: &DatabaseConnection,
-) -> Result<InsertResult<users::ActiveModel>, DbErr> {
-    let new_users = vec![
-        users::ActiveModel {
-            id: NotSet,
-            username: Set("Jim".to_owned()),
-            password: Set("4321".to_owned()),
-        },
-        users::ActiveModel {
-            id: NotSet,
-            username: Set("Kidy".to_owned()),
-            password: Set("4321".to_owned()),
-        },
-        users::ActiveModel {
-            id: NotSet,
-            username: Set("Wellny".to_owned()),
-            password: Set("4321".to_owned()),
-        },
-        users::ActiveModel {
-            id: NotSet,
-            username: Set("Jerry".to_owned()),
-            password: Set("4321".to_owned()),
-        },
-    ];
-
+    data: Vec<(String, String)>,
+) -> Result<InsertResult<users::ActiveModel>, AppError> {
+    let new_users = data.into_iter().map(|(name, pass)| users::ActiveModel {
+        id: NotSet,
+        username: Set(name),
+        password: Set(pass),
+    });
     let result = users::Entity::insert_many(new_users).exec(conn).await?;
 
     // 마지막으로 추가된 레코드의 id값을 구할 수 있다
@@ -157,18 +146,43 @@ pub async fn hello_insert_many(
     Ok(result)
 }
 
-pub async fn hello_update_one(conn: &DatabaseConnection) -> Result<users::Model, DbErr> {
+pub async fn hello_update_one1(
+    conn: &DatabaseConnection,
+    id: i32,
+    change_name: String,
+    change_password: String,
+) -> Result<users::Model, AppError> {
     // 수정할 데이터를 가져와서 into()로 ActiveModel로 변환
-    let mut user = users::Entity::find()
-        .filter(users::Column::Username.eq("dolto"))
-        .one(conn)
-        .await?
-        .unwrap()
-        .into_active_model();
+    let user = users::Entity::find_by_id(id).one(conn).await?;
+
+    if let Some(user) = user {
+        let mut user = user.into_active_model();
+
+        // 데이터를 수정하고
+        user.username = ActiveValue::Set(change_name);
+        user.password = ActiveValue::Set(change_password);
+
+        // 그것을 반영할 수 있다
+        let updated_user = user.update(conn).await?;
+
+        return Ok(updated_user);
+    }
+
+    Err(AppError::new(StatusCode::BAD_REQUEST, "Can't find user"))
+}
+
+pub async fn hello_update_one2(
+    conn: &DatabaseConnection,
+    model: users::Model,
+    change_name: String,
+    change_password: String,
+) -> Result<users::Model, AppError> {
+    // 수정할 데이터를 가져와서 into()로 ActiveModel로 변환
+    let mut user = model.into_active_model();
 
     // 데이터를 수정하고
-    user.username = ActiveValue::Set("Dolto".to_owned());
-    user.password = ActiveValue::Set("4321".to_owned());
+    user.username = ActiveValue::Set(change_name);
+    user.password = ActiveValue::Set(change_password);
 
     // 그것을 반영할 수 있다
     let updated_user = user.update(conn).await?;
@@ -176,10 +190,15 @@ pub async fn hello_update_one(conn: &DatabaseConnection) -> Result<users::Model,
     Ok(updated_user)
 }
 
-pub async fn hello_update_many(conn: &DatabaseConnection) -> Result<UpdateResult, DbErr> {
+pub async fn hello_update_many(
+    conn: &DatabaseConnection,
+    change_name: String,
+    change_password: String,
+) -> Result<UpdateResult, AppError> {
     // 일괄 수정은 다음과 같이 할 수 있다
     let updated_user = users::Entity::update_many()
-        .col_expr(users::Column::Password, Expr::value("Hello Password"))
+        .col_expr(users::Column::Password, Expr::value(change_name))
+        .col_expr(users::Column::Username, Expr::value(change_password))
         // 이런식으로 필터도 넣을 수 있다
         // .filter(users::Column::Password.eq("test"))
         .exec(conn)
@@ -191,25 +210,39 @@ pub async fn hello_update_many(conn: &DatabaseConnection) -> Result<UpdateResult
 // userid 1 삭제
 pub async fn hello_delete_by_model(
     conn: &DatabaseConnection,
-) -> Result<sea_orm::DeleteResult, DbErr> {
-    let user = users::Entity::find_by_id(1)
-        .one(conn)
-        .await?
-        .unwrap()
-        .into_active_model();
-    let delete_user = users::Entity::delete(user).exec(conn).await?;
+    model: users::Model,
+) -> Result<sea_orm::DeleteResult, AppError> {
+    let delete_user = users::Entity::delete_many()
+        .filter(
+            users::Column::Username
+                .eq(model.username)
+                .and(users::Column::Password.eq(model.password)),
+        )
+        .exec(conn)
+        .await?;
 
+    if delete_user.rows_affected == 0 {
+        return Err(AppError::new(StatusCode::NOT_FOUND, "User not found"));
+    }
     Ok(delete_user)
 }
 
-pub async fn hello_delete_by_id(conn: &DatabaseConnection) -> Result<sea_orm::DeleteResult, DbErr> {
+pub async fn hello_delete_by_id(
+    conn: &DatabaseConnection,
+    id: i32,
+) -> Result<sea_orm::DeleteResult, AppError> {
     // userId 2 삭제
-    let delete_user = users::Entity::delete_by_id(2).exec(conn).await?;
+    let delete_user = users::Entity::delete_by_id(id).exec(conn).await?;
 
+    if delete_user.rows_affected == 0 {
+        return Err(AppError::new(StatusCode::NOT_FOUND, "User not found"));
+    }
     Ok(delete_user)
 }
 
-pub async fn hello_delete_many(conn: &DatabaseConnection) -> Result<sea_orm::DeleteResult, DbErr> {
+pub async fn hello_delete_many(
+    conn: &DatabaseConnection,
+) -> Result<sea_orm::DeleteResult, AppError> {
     // user 전체 삭제
     let delete_users = users::Entity::delete_many().exec(conn).await?;
 

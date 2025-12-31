@@ -21,7 +21,7 @@ use axum_extra::{
     headers::{ContentType, UserAgent},
 };
 use reqwest::Client;
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::{ColumnTrait, Condition, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 
@@ -29,10 +29,11 @@ use state::*;
 
 use crate::{
     entities::users,
+    errors::AppError,
     router::hello::database::{
         hello_delete_by_id, hello_delete_by_model, hello_delete_many, hello_insert_many,
-        hello_insert_one1, hello_insert_one2, hello_select_all, hello_select_limit,
-        hello_select_one, hello_update_many, hello_update_one,
+        hello_insert_one1, hello_insert_one2, hello_select_all, hello_select_one,
+        hello_update_many, hello_update_one1, hello_update_one2,
     },
 };
 
@@ -290,28 +291,47 @@ async fn hello_proxy(
     (StatusCode::from_u16(code).unwrap(), body)
 }
 
+// DB
+#[derive(Deserialize)]
+struct HelloUserCondition {
+    id: Option<i32>,
+    like_user: Option<String>,
+    like_pass: Option<String>,
+    gt_id: Option<i32>,
+    lt_id: Option<i32>,
+    limit: Option<u64>,
+}
 #[debug_handler]
 async fn hello_user_select(
-    Path(is_all): Path<bool>,
+    Query(opt): Query<HelloUserCondition>,
     State(pool): State<DatabaseConnection>,
-) -> Json<Vec<users::Model>> {
-    if is_all {
-        return Json(hello_select_all(&pool).await);
+) -> Result<Json<Vec<users::Model>>, AppError> {
+    if let Some(id) = opt.id {
+        return Ok(Json(vec![hello_select_one(&pool, id).await?]));
     }
 
-    Json(vec![hello_select_one(&pool).await])
-}
+    let mut condition = Condition::all();
+    if let Some(like_user) = opt.like_user {
+        condition = condition.add(users::Column::Username.like(format!("%{}%", like_user)));
+    }
+    if let Some(like_pass) = opt.like_pass {
+        condition = condition.add(users::Column::Password.like(format!("%{}%", like_pass)));
+    }
+    if let Some(gt_id) = opt.gt_id {
+        if let Some(lt_id) = opt.lt_id {
+            let temp = Condition::all()
+                .add(users::Column::Id.gt(gt_id))
+                .add(users::Column::Id.lt(lt_id));
+            condition = condition.add(temp);
+        } else {
+            condition = condition.add(users::Column::Id.gt(gt_id));
+        }
+    } else if let Some(lt_id) = opt.lt_id {
+        condition = condition.add(users::Column::Id.lt(lt_id));
+    }
 
-#[derive(Deserialize)]
-struct HelloUserSelectLimitCommand {
-    limit: u64,
-}
-#[debug_handler]
-async fn hello_user_select_limit(
-    Query(limit): Query<HelloUserSelectLimitCommand>,
-    State(pool): State<DatabaseConnection>,
-) -> Json<Vec<users::Model>> {
-    Json(hello_select_limit(&pool, limit.limit).await)
+    let result = hello_select_all(&pool, condition, opt.limit).await?;
+    Ok(Json(result))
 }
 
 #[derive(Deserialize)]
@@ -325,90 +345,164 @@ enum HelloUserExec {
 #[derive(Deserialize)]
 struct HelloUserExecCommand {
     command: HelloUserExec,
+    username: String,
+    password: String,
 }
 #[debug_handler]
 async fn hello_user_insert(
     Query(command): Query<HelloUserExecCommand>,
     State(pool): State<DatabaseConnection>,
-) -> StatusCode {
+) -> Result<StatusCode, AppError> {
     match command.command {
         HelloUserExec::One1 => {
-            let res = hello_insert_one1(&pool).await;
-            if res.is_ok() {
-                return StatusCode::CREATED;
-            }
-            if let Err(err) = res {
-                println!("{:?}", err);
-            }
+            hello_insert_one1(&pool, command.username, command.password).await?;
         }
         HelloUserExec::One2 => {
-            let res = hello_insert_one2(&pool).await;
-            if res.is_ok() {
-                return StatusCode::CREATED;
-            }
-            if let Err(err) = res {
-                println!("{:?}", err);
-            }
+            hello_insert_one2(&pool, command.username, command.password).await?;
         }
-        HelloUserExec::Many => {
-            let res = hello_insert_many(&pool).await;
-            if res.is_ok() {
-                return StatusCode::CREATED;
-            }
-            if let Err(err) = res {
-                println!("{:?}", err);
-            }
+        _ => {
+            return Err(AppError::new(
+                StatusCode::BAD_REQUEST,
+                "Many Insert is moved other url\nPlease use the /hello/db/insert_many",
+            ));
         }
     }
-
-    StatusCode::INTERNAL_SERVER_ERROR
+    Ok(StatusCode::CREATED)
 }
 
+#[derive(Deserialize)]
+struct HelloUserInsertManyCommand {
+    username: String,
+    password: String,
+}
+#[debug_handler]
+async fn hello_user_insert_many(
+    State(pool): State<DatabaseConnection>,
+    Json(command): Json<Vec<HelloUserInsertManyCommand>>,
+) -> Result<StatusCode, AppError> {
+    let models: Vec<(String, String)> = command
+        .into_iter()
+        .map(|com| (com.username, com.password))
+        .collect();
+
+    hello_insert_many(&pool, models).await?;
+    Ok(StatusCode::CREATED)
+}
+
+#[derive(Deserialize)]
+struct HelloUserUpdateCommand {
+    model: Option<HelloUserDeleteCommand>,
+    change_model: users::Model,
+}
 #[debug_handler]
 async fn hello_user_update(
-    Path(is_all): Path<bool>,
+    Path(exec): Path<HelloUserExec>,
     State(pool): State<DatabaseConnection>,
-) -> StatusCode {
-    if is_all {
-        let res = hello_update_one(&pool).await;
-        if res.is_ok() {
-            return StatusCode::OK;
-        }
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-    let res = hello_update_many(&pool).await;
-    if res.is_ok() {
-        return StatusCode::OK;
-    }
-    StatusCode::INTERNAL_SERVER_ERROR
-}
-
-#[debug_handler]
-async fn hello_user_delete(
-    Query(command): Query<HelloUserExecCommand>,
-    State(pool): State<DatabaseConnection>,
-) -> StatusCode {
-    let is_ok;
-    match command.command {
+    Json(model): Json<HelloUserUpdateCommand>,
+) -> Result<StatusCode, AppError> {
+    match exec {
         HelloUserExec::One1 => {
-            is_ok = hello_delete_by_id(&pool).await.is_ok();
+            if let Some(find) = model.model {
+                if let Some(id) = find.id {
+                    hello_update_one1(
+                        &pool,
+                        id,
+                        model.change_model.username,
+                        model.change_model.password,
+                    )
+                    .await?;
+                }
+            }
         }
         HelloUserExec::One2 => {
-            is_ok = hello_delete_by_model(&pool).await.is_ok();
+            if let Some(find) = model.model {
+                if let (Some(id), Some(username), Some(password)) =
+                    (find.id, find.username, find.password)
+                {
+                    let find = users::Model {
+                        id,
+                        username,
+                        password,
+                    };
+                    hello_update_one2(
+                        &pool,
+                        find,
+                        model.change_model.username,
+                        model.change_model.password,
+                    )
+                    .await?;
+                }
+            }
         }
         HelloUserExec::Many => {
-            is_ok = hello_delete_many(&pool).await.is_ok();
+            hello_update_many(
+                &pool,
+                model.change_model.username,
+                model.change_model.password,
+            )
+            .await?;
+        }
+    }
+    Ok(StatusCode::OK)
+}
+
+#[derive(Deserialize)]
+struct HelloUserDeleteCommand {
+    id: Option<i32>,
+    username: Option<String>,
+    password: Option<String>,
+}
+#[debug_handler]
+async fn hello_user_delete(
+    Path(command): Path<HelloUserExec>,
+    Query(model): Query<HelloUserDeleteCommand>,
+    State(pool): State<DatabaseConnection>,
+) -> Result<StatusCode, AppError> {
+    match command {
+        HelloUserExec::One1 => {
+            if let Some(id) = model.id {
+                hello_delete_by_id(&pool, id).await?;
+            } else {
+                return Err(AppError::new(
+                    StatusCode::BAD_REQUEST,
+                    "Need input the user info",
+                ));
+            }
+        }
+        HelloUserExec::One2 => {
+            if let (Some(username), Some(password)) = (model.username, model.password) {
+                hello_delete_by_model(
+                    &pool,
+                    users::Model {
+                        id: -1,
+                        username,
+                        password,
+                    },
+                )
+                .await?;
+            } else {
+                return Err(AppError::new(
+                    StatusCode::BAD_REQUEST,
+                    "Need input the user info",
+                ));
+            }
+        }
+        HelloUserExec::Many => {
+            hello_delete_many(&pool).await?;
         }
     }
 
-    if is_ok {
-        StatusCode::OK
-    } else {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
+    Ok(StatusCode::OK)
 }
 
 pub fn hello_router(pool: DatabaseConnection) -> Router {
+    let db_router = Router::new()
+        .route("/select", get(hello_user_select))
+        .route("/insert", get(hello_user_insert))
+        .route("/insert_many", post(hello_user_insert_many))
+        .route("/update/{exec}", post(hello_user_update))
+        .route("/delete/{command}", get(hello_user_delete));
+
     let hello_router = Router::new()
         .route("/param1", get(param_query_with_hashmap))
         .route("/param2", get(param_query_with_struct))
@@ -438,11 +532,7 @@ pub fn hello_router(pool: DatabaseConnection) -> Router {
         // 프록시 서버
         .route("/proxy", post(hello_proxy))
         // .with_state(get_proxy_state());
-        .route("/db/select", get(hello_user_select_limit))
-        .route("/db/select/{is_all}", get(hello_user_select))
-        .route("/db/insert", get(hello_user_insert))
-        .route("/db/update/{is_all}", get(hello_user_update))
-        .route("/db/delete", get(hello_user_delete))
+        .nest("/db", db_router)
         .with_state(get_hello_state(pool));
 
     // 상태관리의 경우 마지막 상태가 확정된 상태이므로,

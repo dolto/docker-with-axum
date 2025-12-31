@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 
+pub const DB_ERR_MESSAGE: &str = "Somthing is wrong about Database";
 pub async fn init_db() -> Result<DatabaseConnection, DbErr> {
     // 컨테이너 내부에 이미 환경변수 설정이 되어있음
     // 만약 파일에서 가져오고 싶다면 dotenv 크레이트로 가져오면 된다
