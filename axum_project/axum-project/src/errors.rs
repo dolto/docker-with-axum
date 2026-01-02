@@ -1,4 +1,4 @@
-use axum::{Json, response::IntoResponse};
+use axum::{Json, RequestPartsExt, response::IntoResponse};
 use reqwest::StatusCode;
 use sea_orm::DbErr;
 
@@ -25,6 +25,14 @@ impl AppError {
 impl From<DbErr> for AppError {
     fn from(_: DbErr) -> Self {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, DB_ERR_MESSAGE)
+    }
+}
+impl From<reqwest::Error> for AppError {
+    fn from(value: reqwest::Error) -> Self {
+        Self::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Request Error! {:?}", value),
+        )
     }
 }
 

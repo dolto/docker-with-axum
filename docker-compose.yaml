@@ -2,13 +2,15 @@ services:
   db:
     image: postgres:18.1-alpine
     container_name: axum-postgres
+    env_file:
+      - ./env_files/DB_ADMIN.env
     shm_size: 128mb
     volumes:
       - db-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: dolto
-      POSTGRES_DB: dolto
-      POSTGRES_PASSWORD: dolto
+    # environment:
+    #   POSTGRES_USER: ${POSTGRES_USER}
+    #   POSTGRES_DB: ${POSTGRES_DB}
+    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     networks: 
       - backend
 
@@ -20,10 +22,12 @@ services:
       dockerfile: Dockerfile
     image: axum:dev
     container_name: axum-dev
+    env_file:
+      - ./env_files/DB_URL.env
     volumes:
       - ./axum_project:/home/app
-    environment:
-      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    # environment:
+    #   DATABASE_URL: ${DATABASE_URL}
     ports: 
       - 8080:8000
     networks: 
@@ -37,12 +41,14 @@ services:
     image: sea-orm:dev
     profiles: ["migration-up"]
     container_name: sea-orm-upper
+    env_file:
+      - ./env_files/DB_URL.env
     working_dir: /home/app
     command: ["sea-orm-cli", "migrate", "up"]
     volumes:
       - ./db:/home/app
-    environment:
-      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    # environment:
+    #   DATABASE_URL: ${DATABASE_URL}
     networks:
       - backend
       
@@ -51,12 +57,14 @@ services:
     image: sea-orm:dev
     profiles: ["migration-downer"]
     container_name: sea-orm-downer
+    env_file:
+      - ./env_files/DB_URL.env
     working_dir: /home/app
     command: ["sea-orm-cli", "migrate", "down"]
     volumes:
       - ./db:/home/app
-    environment:
-      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    # environment:
+    #   DATABASE_URL: ${DATABASE_URL}
     networks:
       - backend
 
@@ -64,12 +72,14 @@ services:
     image: sea-orm:dev
     profiles: ["generation-entity"]
     container_name: sea-orm-entity
+    env_file:
+      - ./env_files/DB_URL.env
     working_dir: /home/app
     command: ["sea-orm-cli", "generate", "entity", "-o", "src/entities", "--with-serde", "both"]
     volumes:
       - ./axum_project/axum-project:/home/app
-    environment:
-      DATABASE_URL: postgres://axum:1234@db:5432/axum
+    # environment:
+    #   DATABASE_URL: ${DATABASE_URL}
     networks:
       - backend
 

@@ -2,7 +2,7 @@ mod database;
 mod open_api;
 mod state;
 use std::{
-    collections::HashMap, fmt::Binary, sync::{Arc, Mutex}
+    collections::HashMap, sync::{Arc}
 };
 
 use axum::{
@@ -11,8 +11,7 @@ use axum::{
     debug_handler,
     extract::{Multipart, Path, Query, State},
     http::{
-        HeaderMap, StatusCode,
-        header::{CONTENT_TYPE, USER_AGENT},
+        HeaderMap, HeaderValue, StatusCode, header::{CONTENT_TYPE, USER_AGENT}
     },
 };
 use axum_extra::{
@@ -22,6 +21,7 @@ use axum_extra::{
 use reqwest::Client;
 use sea_orm::{ColumnTrait, Condition, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use std::fmt::Write;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -228,17 +228,17 @@ async fn body_query_form(Form(user): Form<TestJson>) -> String {
 }
 
 // 파일 업로드
-#[derive(Deserialize, ToSchema)]
-struct UploadForm {
-    #[schema(format = Binary)]
-    file: String,
-}
+// #[derive(Deserialize, ToSchema)]
+// struct UploadForm {
+//     #[schema(format = Binary)]
+//     file: String,
+// }
 #[utoipa::path(
     post,
     path = "/file",
     tag = HELLO_TAG,
     request_body(
-        content = UploadForm,
+        content = Vec<u8>,
         content_type = mime::MULTIPART_FORM_DATA.as_ref(),
         description = "get File",
     ),
@@ -297,17 +297,17 @@ async fn body_query_file_upload(mut body: Multipart) -> String {
 #[debug_handler]
 async fn header_hello1(headers: HeaderMap) -> String {
     let user_agent = headers
-        .get(USER_AGENT)
-        .map(|v| v.to_str().unwrap().to_string());
+        .get(USER_AGENT).map(|v| v.to_owned())
+        .unwrap_or(HeaderValue::from_name(USER_AGENT));
 
     let content_type = headers
-        .get(CONTENT_TYPE)
-        .map(|v| v.to_str().unwrap().to_string());
+        .get(CONTENT_TYPE).map(|v| v.to_owned())
+        .unwrap_or(HeaderValue::from_name(CONTENT_TYPE));
 
     format!(
-        "User-Agent: {}, Content-Type: {}\n",
-        user_agent.unwrap_or_default(),
-        content_type.unwrap_or_default()
+        "User-Agent: {:?}, Content-Type: {:?}\n",
+        user_agent,
+        content_type
     )
 }
 
@@ -461,7 +461,7 @@ async fn response_base_rest_api() -> (TypedHeader<ContentType>, (StatusCode, Str
 )]
 #[debug_handler]
 async fn state_base_counter(State(data): State<Arc<Mutex<Vec<i32>>>>) -> String {
-    let mut data = data.lock().unwrap();
+    let mut data = data.lock().await;
     data[0] += 1;
 
     format!("Hello {}Times Again!\n", data[0])
@@ -552,13 +552,14 @@ struct Data {
         )
     )
 )]
-#[debug_handler]
+#[debug_handler(state = HelloState)]
 async fn hello_proxy(
     State(state): State<Arc<Mutex<HashMap<String, (Bytes, usize)>>>>,
+    State(client): State<Client>,
     Json(data): Json<Data>,
-) -> (StatusCode, Bytes) {
+) -> Result<(StatusCode, Bytes), AppError> {
     let need_pics;
-    if let Some(body) = state.lock().unwrap().get(&data.breed) {
+    if let Some(body) = state.lock().await.get(&data.breed) {
         need_pics = if let Some(num_pics) = data.num_pics {
             num_pics
         } else {
@@ -566,7 +567,7 @@ async fn hello_proxy(
         };
 
         if need_pics == body.1 as i32 {
-            return (StatusCode::OK, body.0.clone());
+            return Ok((StatusCode::OK, body.0.clone()));
         }
     }
 
@@ -576,17 +577,18 @@ async fn hello_proxy(
         url.push_str(format!("/{}", num_pics).as_str());
     }
 
-    let client = Client::new();
-    let res = client.get(url).send().await.unwrap();
+    let res = client.get(url).send().await?;
 
     let code = res.status().as_u16();
-    let body = res.bytes().await.unwrap();
+    let body = res.bytes().await?;
 
-    state.lock().unwrap().insert(
+    state.lock().await.insert(
         data.breed,
         (body.clone(), data.num_pics.unwrap_or(1) as usize),
     );
-    (StatusCode::from_u16(code).unwrap(), body)
+
+    // 여기서 unwrap은 동작할것이 자명하기 때문에 그냥 넘어가자
+    Ok((StatusCode::from_u16(code).unwrap(), body))
 }
 
 // DB
@@ -940,6 +942,7 @@ pub fn hello_router(pool: DatabaseConnection) -> Router {
         .routes(routes!(body_query_text))
         .routes(routes!(body_query_bytes))
         .routes(routes!(body_query_form))
+        .routes(routes!(body_query_json))
         .routes(routes!(body_query_file_upload))
         .routes(routes!(header_hello1))
         .routes(routes!(header_hello2))

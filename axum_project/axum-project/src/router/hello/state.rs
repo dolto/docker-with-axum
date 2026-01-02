@@ -1,10 +1,9 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{body::Bytes, extract::FromRef};
+use reqwest::Client;
 use sea_orm::DatabaseConnection;
+use tokio::sync::Mutex;
 
 fn get_base_state() -> Arc<Mutex<Vec<i32>>> {
     Arc::new(Mutex::new(vec![0; 3]))
@@ -34,6 +33,7 @@ pub struct HelloState {
     base_state: Arc<Mutex<Vec<i32>>>,
     proxy_state: Arc<Mutex<HashMap<String, (Bytes, usize)>>>,
     pool: DatabaseConnection,
+    client: Client,
 }
 
 pub fn get_hello_state(pool: DatabaseConnection) -> HelloState {
@@ -41,6 +41,7 @@ pub fn get_hello_state(pool: DatabaseConnection) -> HelloState {
         hello_app_state: get_hello_app_state(),
         base_state: get_base_state(),
         proxy_state: get_proxy_state(),
+        client: Client::new(), // request의 client도 pooling이 되므로, 매번 new하지 말고 저장해서 써라
         pool,
     }
 }

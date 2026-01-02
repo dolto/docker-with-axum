@@ -31,6 +31,7 @@
 │       └── src
 │           ├── database.rs
 │           ├── entities
+│           ├── errors.rs
 │           ├── main.rs
 │           └── router
 ├── db
@@ -43,16 +44,34 @@
 │           ├── lib.rs
 │           ├── m20251228_110826_create_table.rs
 │           └── main.rs
-└── docker-compose.yaml
+├── docker-compose.yaml
+└── env_files
+    ├── DB_ADMIN.env
+    └── DB_URL.env
 ```
 
 ### 프로젝트 초기 설정(초본)
-1. ```docker compose --file docker-compose.yaml up --detach```
-2. 생성된 컨테이너 두개를 확인
+1. 환경변수 파일을 생성
+```sh
+└── env_files
+    ├── DB_ADMIN.env
+    └── DB_URL.env
+```
+2. 환경변수 설정(예시)
+```DB_URL.env
+DATABASE_URL=postgres://axum:1234@db:5432/axum
+```
+```DB_ADMIN.env
+POSTGRES_USER=dolto
+POSTGRES_DB=dolto
+POSTGRES_PASSWORD=dolto
+```
+3. ```docker compose --file docker-compose.yaml up --detach```
+4. 생성된 컨테이너 두개를 확인
 ```sh
   docker container ls
 ```
-3. DB로 들어가 컨테이너 설정
+5. DB로 들어가 컨테이너 설정(예제를 따랐다면 다음과 같이 설정)
 - ```docker container exec -it axum-postgres psql -U dolto```
 ```sql
   create user axum;
@@ -61,6 +80,8 @@
   alter database axum owner to axum;
   \q
 ```
+6. 여담
+- ADMIN과 DB_URL의 유저를 같은 사람으로 설정했다면 데이터베이스만 생성하면 된다
 
 ### 소스코드
 - axum_project/axum-project 에서 수정 가능
