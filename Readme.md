@@ -76,6 +76,10 @@
 - 핸들러 함수에 다음 어노테이션을 걸면, 컴파일시 발생하는 에러를 더 명확하게 알 수 있다
 
 #### 테스트 curl 정보
+- 밑의 curl도 가능하지만, scalar나 redoc으로 api를 확인할 밑 테스트 할 수 있다
+- http://localhost:8080/hello/scalar
+- http://localhost:8080/hello/redoc
+- (redoc은 테스트를 어떻게 하는지 잘 모르겠다)
 ```sh
   # 기본 요청
   curl -X GET "http://localhost:8080/"
@@ -122,10 +126,11 @@
 
   # Hello User Database
   # Insert
-  curl -i "http://localhost:8080/hello/db/insert?command=one1&username=user&password=pass1"
-  curl -i "http://localhost:8080/hello/db/insert?command=one2&username=user&password=pass2"
+  curl -i "http://localhost:8080/hello/db/insert?command=one1&username=user&password=pass1" -H 'hello_apikey:utoipa-rocks'
+  curl -i "http://localhost:8080/hello/db/insert?command=one2&username=user&password=pass2" -H 'hello_apikey:utoipa-rocks'
   curl -i -X POST "http://localhost:8080/hello/db/insert_many" \
   -H "Content-Type: application/json" \
+  -H 'hello_apikey:utoipa-rocks' \
   -d '[
     {"username":"erin","password":"pass5"},
     {"username":"frank","password":"pass6"},
@@ -144,27 +149,30 @@
   # Update (모델을 가져오든 id로 가져오든 결국 pk를 기준으로 변경하는듯)
   curl -i -X POST "http://localhost:8080/hello/db/update/one1" \
   -H "Content-Type: application/json" \
+  -H 'hello_apikey:utoipa-rocks'
   -d '{
     "model":  { "id": 23, "username": "alice", "password": "pass1" },
     "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
   }'
   curl -i -X POST "http://localhost:8080/hello/db/update/one2" \
   -H "Content-Type: application/json" \
+  -H 'hello_apikey:utoipa-rocks'
   -d '{
     "model":  { "id": 23, "username": "alice", "password": "pass1" },
     "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
   }'
   curl -i -X POST "http://localhost:8080/hello/db/update/many" \
   -H "Content-Type: application/json" \
+  -H 'hello_apikey:utoipa-rocks'
   -d '{
     "model": { "id": 0, "username": "dummy", "password": "dummy" },
     "change_model": { "id": 0, "username": "GLOBAL_UPDATED", "password": "global_pw" }
   }'
 
   # Delete
-  curl -i "http://localhost:8080/hello/db/delete/one1?id=1"
-  curl -i "http://localhost:8080/hello/db/delete/one2?username=name&password=pass2"
-  curl -i "http://localhost:8080/hello/db/delete/many"
+  curl -i "http://localhost:8080/hello/db/delete/one1?id=1" -H 'hello_apikey:utoipa-rocks'
+  curl -i "http://localhost:8080/hello/db/delete/one2?username=name&password=pass2" -H 'hello_apikey:utoipa-rocks'
+  curl -i "http://localhost:8080/hello/db/delete/many" -H 'hello_apikey:utoipa-rocks'
 ```
 
 #### SeaORM 마이그레이션 위치
