@@ -77,7 +77,9 @@
 
 #### 테스트 curl 정보
 - 밑의 curl도 가능하지만, scalar나 redoc으로 api를 확인할 밑 테스트 할 수 있다
+- <img width="844" height="558" alt="image" src="https://github.com/user-attachments/assets/0e9c46cc-4045-41de-967d-fd7813840dea" />
 - http://localhost:8080/hello/scalar
+- <img width="909" height="400" alt="image" src="https://github.com/user-attachments/assets/7c2b2783-cfc1-41b4-96b1-5ff168a1dee7" />
 - http://localhost:8080/hello/redoc
 - (redoc은 테스트를 어떻게 하는지 잘 모르겠다)
 ```sh
