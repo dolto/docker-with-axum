@@ -11,7 +11,7 @@ services:
     #   POSTGRES_USER: ${POSTGRES_USER}
     #   POSTGRES_DB: ${POSTGRES_DB}
     #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    networks: 
+    networks:
       - backend
 
   axum-dev:
@@ -24,13 +24,16 @@ services:
     container_name: axum-dev
     env_file:
       - ./env_files/DB_URL.env
+      - ./env_files/DEV.env
+    working_dir: /home/app
     volumes:
-      - ./axum_project:/home/app
+      - ./axum_project/axum-project:/home/app
+      - /app/target
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
-    ports: 
+    ports:
       - 8080:8000
-    networks: 
+    networks:
       - backend
 
 # CMD ["cargo", "run", "--manifest-path", "./migration/Cargo.toml", "--", "up"]
@@ -51,7 +54,7 @@ services:
     #   DATABASE_URL: ${DATABASE_URL}
     networks:
       - backend
-      
+
 # cargo run --manifest-path ./migration/Cargo.toml -- down -n 1
   sea-orm-downer:
     image: sea-orm:dev
@@ -86,7 +89,7 @@ services:
 volumes:
   db-data:
     name: axum-postgres-db-data
-    
+
 networks:
   backend:
     name: axum-backend-network

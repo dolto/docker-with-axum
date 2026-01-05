@@ -1,11 +1,13 @@
 // 책에는 안나왔지만 이걸 해야할 것 같은데?
 mod database;
 mod entities;
-mod errors;
+mod middle;
 mod router;
+mod utils;
 
 use crate::{
     database::init_db,
+    middle::{init_middel_ware, time_out_test},
     router::{hello::*, user::*},
 };
 use axum::{Router, routing::get};
@@ -34,8 +36,12 @@ async fn main() {
         // DB연결
         .with_state(db.clone())
         .nest("/api", api_router)
-        .nest("/hello", hello_router);
+        .nest("/hello", hello_router)
+        .route("/middle/test", get(time_out_test));
+
+    let app = init_middel_ware(app);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+
     axum::serve(listener, app).await.unwrap();
 }

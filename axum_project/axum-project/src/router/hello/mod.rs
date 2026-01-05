@@ -1,9 +1,7 @@
 mod database;
 mod open_api;
 mod state;
-use std::{
-    collections::HashMap, sync::{Arc}
-};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     Extension, Form, Json, Router,
@@ -11,7 +9,8 @@ use axum::{
     debug_handler,
     extract::{Multipart, Path, Query, State},
     http::{
-        HeaderMap, HeaderValue, StatusCode, header::{CONTENT_TYPE, USER_AGENT}
+        HeaderMap, HeaderValue, StatusCode,
+        header::{CONTENT_TYPE, USER_AGENT},
     },
 };
 use axum_extra::{
@@ -21,28 +20,30 @@ use axum_extra::{
 use reqwest::Client;
 use sea_orm::{ColumnTrait, Condition, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
-use std::fmt::Write;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use state::*;
 
 use crate::{
-    entities::users, errors::AppError, router::hello::{
+    entities::users,
+    errors::AppError,
+    router::hello::{
         database::{
             hello_delete_by_id, hello_delete_by_model, hello_delete_many, hello_insert_many,
             hello_insert_one1, hello_insert_one2, hello_select_all, hello_select_one,
             hello_update_many, hello_update_one1, hello_update_one2,
         },
         open_api::{HELLO_TAG, set_router},
-    }
+    },
 };
 
 // url 경로상 데이터를 받는 방법
 #[utoipa::path(
-    get, 
-    path = "/path/{id}/{name}", 
+    get,
+    path = "/path/{id}/{name}",
     tag = HELLO_TAG,
     params(
         ("id" = i32, Path, description = "numeric id"),
@@ -50,7 +51,7 @@ use crate::{
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get id(i32) name(String), and print",
             body = String,
             example = "1 : dolto"
@@ -74,7 +75,7 @@ async fn path_query(Path((id, name)): Path<(i32, String)>) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get id(String) name(String), and print",
             body = String,
             example = "d : dolto"
@@ -109,7 +110,7 @@ struct User {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get id(String) name(String), and print",
             body = String,
             example = "d : dolto"
@@ -139,7 +140,7 @@ async fn param_query_with_struct(Query(user): Query<User>) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get name(String), and print",
             body = String,
             example = "Hello dolto\n"
@@ -163,7 +164,7 @@ async fn body_query_text(name: String) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get name(Bytes), and print",
             body = String,
             example = "Hello dolto\n"
@@ -191,7 +192,7 @@ struct TestJson {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get name(Json), and print",
             body = String,
             example = "Hello dolto\n"
@@ -215,7 +216,7 @@ async fn body_query_json(Json(user): Json<TestJson>) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get name(Form), and print",
             body = String,
             example = "Hello dolto\n"
@@ -244,7 +245,7 @@ async fn body_query_form(Form(user): Form<TestJson>) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get file, and name : length print",
             body = String,
             example = "file_name : 1002"
@@ -275,7 +276,6 @@ async fn body_query_file_upload(mut body: Multipart) -> String {
     result
 }
 
-
 #[utoipa::path(
     get,
     path = "/header1",
@@ -287,7 +287,7 @@ async fn body_query_file_upload(mut body: Multipart) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get file, and name : length print",
             body = String,
             example = "User-Agent: , Content-Type: "
@@ -297,17 +297,18 @@ async fn body_query_file_upload(mut body: Multipart) -> String {
 #[debug_handler]
 async fn header_hello1(headers: HeaderMap) -> String {
     let user_agent = headers
-        .get(USER_AGENT).map(|v| v.to_owned())
+        .get(USER_AGENT)
+        .map(|v| v.to_owned())
         .unwrap_or(HeaderValue::from_name(USER_AGENT));
 
     let content_type = headers
-        .get(CONTENT_TYPE).map(|v| v.to_owned())
+        .get(CONTENT_TYPE)
+        .map(|v| v.to_owned())
         .unwrap_or(HeaderValue::from_name(CONTENT_TYPE));
 
     format!(
         "User-Agent: {:?}, Content-Type: {:?}\n",
-        user_agent,
-        content_type
+        user_agent, content_type
     )
 }
 
@@ -326,7 +327,7 @@ async fn header_hello1(headers: HeaderMap) -> String {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "get file, and name : length print",
             body = String,
             example = "User-Agent: , Content-Type: "
@@ -353,7 +354,7 @@ async fn header_hello2(
 
 // 물론 이런식으로 구조체로 활용하지 않고,
 // 평문으로 작성을 지원하는 serde_json을 이용할 수도 있지만, 타입 안전성과, 성능이슈로 사용하지 않기를 권함
-#[derive(Serialize,ToSchema)]
+#[derive(Serialize, ToSchema)]
 struct JsonTest {
     #[schema(example = "Hello Json!")]
     message: String,
@@ -365,7 +366,7 @@ struct JsonTest {
     description = "Json Response Test",
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "json",
             body = JsonTest,
         )
@@ -384,7 +385,6 @@ async fn response_json() -> Json<JsonTest> {
 // StatusCode의 응답코드는 반드시 (StatusCode, T) 형식이어야 한다
 // 아래 주석과 같이 단일로 사용할 수도 있지만 튜플형태라면 위 규칙을 지켜야한다
 
-
 #[utoipa::path(
     get,
     path = "/status_code",
@@ -392,7 +392,7 @@ async fn response_json() -> Json<JsonTest> {
     description = "Status Code Test",
     responses(
         (
-            status = StatusCode::CREATED, 
+            status = StatusCode::CREATED,
             description = "StatusCode is Created",
             body = String,
             example = "Hello StatusCode"
@@ -417,7 +417,7 @@ async fn response_status_code() -> (StatusCode, String) {
     description = "Rest API Test",
     responses(
         (
-            status = StatusCode::CREATED, 
+            status = StatusCode::CREATED,
             description = "ContentType is text ,StatusCode is Created",
             body = String,
             example = "Hello StatusCode"
@@ -452,7 +452,7 @@ async fn response_base_rest_api() -> (TypedHeader<ContentType>, (StatusCode, Str
     description = "State Counter",
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "Counter",
             body = String,
             example = "Hello 1Times Again!\n"
@@ -474,7 +474,7 @@ async fn state_base_counter(State(data): State<Arc<Mutex<Vec<i32>>>>) -> String 
     description = "State App Data (not Saved)",
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "AppState",
             body = String,
             example = "auth_token\n"
@@ -493,7 +493,7 @@ async fn state_appdata_name(State(data): State<HelloAppState>) -> String {
     description = "State App Data (not Saved)",
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "AppState",
             body = String,
             example = "3\n"
@@ -513,7 +513,7 @@ async fn state_appdata_users(State(data): State<HelloAppState>) -> String {
     description = "Extention App Data (not Saved)",
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "AppState",
             body = String,
             example = "4\n"
@@ -527,7 +527,7 @@ async fn extension_appdata_users(Extension(mut data): Extension<HelloAppState>) 
 }
 
 // 프록시 예제
-#[derive(Deserialize,ToSchema)]
+#[derive(Deserialize, ToSchema)]
 struct Data {
     #[schema(example = "chihuahua")]
     breed: String,
@@ -547,7 +547,7 @@ struct Data {
     ),
     responses(
         (
-            status = 200, 
+            status = 200,
             description = "ProxyData",
         )
     )
@@ -592,7 +592,7 @@ async fn hello_proxy(
 }
 
 // DB
-#[derive(Deserialize,IntoParams)]
+#[derive(Deserialize, IntoParams)]
 struct HelloUserCondition {
     id: Option<i32>,
     like_user: Option<String>,
@@ -626,10 +626,10 @@ struct HelloUserCondition {
 async fn hello_user_select(
     Query(opt): Query<HelloUserCondition>,
     State(pool): State<DatabaseConnection>,
-    headers: HeaderMap
+    headers: HeaderMap,
 ) -> Result<Json<Vec<users::Model>>, AppError> {
-    match check_api_key(false, headers){
-        Ok(_) => {},
+    match check_api_key(false, headers) {
+        Ok(_) => {}
         Err(err) => return Err(err),
     }
     if let Some(id) = opt.id {
@@ -692,10 +692,10 @@ struct HelloUserExecCommand {
 async fn hello_user_insert(
     Query(command): Query<HelloUserExecCommand>,
     State(pool): State<DatabaseConnection>,
-    headers: HeaderMap
+    headers: HeaderMap,
 ) -> Result<StatusCode, AppError> {
-    match check_api_key(true, headers){
-        Ok(_) => {},
+    match check_api_key(true, headers) {
+        Ok(_) => {}
         Err(err) => return Err(err),
     }
     match command.command {
@@ -715,12 +715,11 @@ async fn hello_user_insert(
     Ok(StatusCode::CREATED)
 }
 
-#[derive(Deserialize,ToSchema)]
+#[derive(Deserialize, ToSchema)]
 struct HelloUserInsertManyCommand {
     username: String,
     password: String,
 }
-
 
 #[utoipa::path(
     get,
@@ -746,8 +745,8 @@ async fn hello_user_insert_many(
     headers: HeaderMap,
     Json(command): Json<Vec<HelloUserInsertManyCommand>>,
 ) -> Result<StatusCode, AppError> {
-    match check_api_key(true, headers){
-        Ok(_) => {},
+    match check_api_key(true, headers) {
+        Ok(_) => {}
         Err(err) => return Err(err),
     }
     let models: Vec<(String, String)> = command
@@ -790,8 +789,8 @@ async fn hello_user_update(
     headers: HeaderMap,
     Json(model): Json<HelloUserUpdateCommand>,
 ) -> Result<StatusCode, AppError> {
-    match check_api_key(true, headers){
-        Ok(_) => {},
+    match check_api_key(true, headers) {
+        Ok(_) => {}
         Err(err) => return Err(err),
     }
     match exec {
@@ -872,8 +871,8 @@ async fn hello_user_delete(
     State(pool): State<DatabaseConnection>,
     headers: HeaderMap,
 ) -> Result<StatusCode, AppError> {
-    match check_api_key(true, headers){
-        Ok(_) => {},
+    match check_api_key(true, headers) {
+        Ok(_) => {}
         Err(err) => return Err(err),
     }
     match command {
@@ -915,15 +914,14 @@ async fn hello_user_delete(
 
 // API Key가 유효한지 확인하는 함수
 // GPT는 미들웨어로 분리하는걸 권장함
-fn check_api_key(
-    require_api_key: bool,
-    headers: HeaderMap
-) -> Result<(), AppError> {
+fn check_api_key(require_api_key: bool, headers: HeaderMap) -> Result<(), AppError> {
     match headers.get("hello_apikey") {
         // 근데 이거 이렇게 하면 "utoipa-rocks"로 api_key가 고정되는거 아닌가
-        Some(header) if header != "utoipa-rocks" => Err(AppError::new(StatusCode::UNAUTHORIZED, "incorrect api key")),
+        Some(header) if header != "utoipa-rocks" => {
+            Err(AppError::new(StatusCode::UNAUTHORIZED, "incorrect api key"))
+        }
         None if require_api_key => Err(AppError::new(StatusCode::UNAUTHORIZED, "missing api key")),
-        _ => Ok(())
+        _ => Ok(()),
     }
 }
 
