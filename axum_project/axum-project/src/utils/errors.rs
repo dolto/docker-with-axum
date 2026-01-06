@@ -1,5 +1,8 @@
+use std::fmt::Debug;
+
 use axum::{Json, response::IntoResponse};
-use reqwest::StatusCode;
+use bcrypt::BcryptError;
+use reqwest::{StatusCode, header::ToStrError};
 use sea_orm::DbErr;
 use tracing::error;
 
@@ -23,6 +26,14 @@ impl AppError {
     }
     fn auth_error() -> Self {
         Self::new(StatusCode::UNAUTHORIZED, "error validating token")
+    }
+    pub fn any_error() -> Self {
+        Self::new(StatusCode::INTERNAL_SERVER_ERROR, "some thing is wrong!")
+    }
+
+    pub fn any_t_error<T: Debug>(e: T) -> Self {
+        error!("Any Error: {:?}", e);
+        AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "some thing is wrong")
     }
 }
 
@@ -52,7 +63,24 @@ impl From<jsonwebtoken::errors::Error> for AppError {
         }
     }
 }
-
+impl From<ToStrError> for AppError {
+    fn from(value: ToStrError) -> Self {
+        error!("Str Error! {:?}", value);
+        AppError::any_error()
+    }
+}
+impl From<BcryptError> for AppError {
+    fn from(value: BcryptError) -> Self {
+        error!("BcryptError! {:?}", value);
+        AppError::new(StatusCode::UNAUTHORIZED, "Id or Pass is wrong!")
+    }
+}
+impl From<&str> for AppError {
+    fn from(value: &str) -> Self {
+        error!("String Error! {:?}", value);
+        AppError::new(StatusCode::UNAUTHORIZED, value)
+    }
+}
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         (self.code, Json(self.message)).into_response()

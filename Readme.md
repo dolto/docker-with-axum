@@ -31,9 +31,30 @@
 │       └── src
 │           ├── database.rs
 │           ├── entities
-│           ├── errors.rs
+│           │   ├── category.rs
+│           │   ├── mod.rs
+│           │   ├── prelude.rs
+│           │   ├── product.rs
+│           │   └── users.rs
+│           ├── lib.rs
 │           ├── main.rs
-│           └── router
+│           ├── middle.rs
+│           ├── router
+│           │   ├── api
+│           │   │   ├── auth.rs
+│           │   │   ├── mod.rs
+│           │   │   └── user.rs
+│           │   ├── hello
+│           │   │   ├── database.rs
+│           │   │   ├── mod.rs
+│           │   │   ├── open_api.rs
+│           │   │   └── state.rs
+│           │   └── mod.rs
+│           └── utils
+│               ├── errors.rs
+│               ├── hash.rs
+│               ├── jwt.rs
+│               └── mod.rs
 ├── db
 │   ├── Dockerfile
 │   └── migration
@@ -47,7 +68,8 @@
 ├── docker-compose.yaml
 └── env_files
     ├── DB_ADMIN.env
-    └── DB_URL.env
+    ├── DB_URL.env
+    └── DEV.env
 ```
 
 ### 프로젝트 초기 설정(초본)
@@ -97,6 +119,9 @@ POSTGRES_PASSWORD=dolto
 - 핸들러 함수에 다음 어노테이션을 걸면, 컴파일시 발생하는 에러를 더 명확하게 알 수 있다
 
 #### 테스트 curl 정보
+- OpenAi 문서 링크
+- /api/user/doc/scalar (or redoc)
+- /hello/scalar (or redoc)
 - 밑의 curl도 가능하지만, scalar나 redoc으로 api를 확인할 밑 테스트 할 수 있다
 - <img width="844" height="558" alt="image" src="https://github.com/user-attachments/assets/0e9c46cc-4045-41de-967d-fd7813840dea" />
 - http://localhost:8080/hello/scalar
@@ -104,12 +129,6 @@ POSTGRES_PASSWORD=dolto
 - http://localhost:8080/hello/redoc
 - (redoc은 테스트를 어떻게 하는지 잘 모르겠다)
 ```sh
-  # 기본 요청
-  curl -X GET "http://localhost:8080/"
-  curl -X POST "http://localhost:8080/"
-  curl -X PUT "http://localhost:8080/"
-  curl -X DELETE "http://localhost:8080/"
-
   # Path & Parameter
   curl -X GET "http://localhost:8080/hello/path/1/dolto"
   curl -X GET "http://localhost:8080/hello/param1?id=12&name=dolto"
@@ -168,7 +187,7 @@ POSTGRES_PASSWORD=dolto
   curl -X GET "http://localhost:8080/hello/db/select?like_pass=1234" -i
   curl -i "http://localhost:8080/hello/db/select?gt_id=1&lt_id=10"
   curl -i "http://localhost:8080/hello/db/select?limit=2"
-  
+
   # Update (모델을 가져오든 id로 가져오든 결국 pk를 기준으로 변경하는듯)
   curl -i -X POST "http://localhost:8080/hello/db/update/one1" \
   -H "Content-Type: application/json" \
@@ -196,7 +215,48 @@ POSTGRES_PASSWORD=dolto
   curl -i "http://localhost:8080/hello/db/delete/one1?id=1" -H 'hello_apikey:utoipa-rocks'
   curl -i "http://localhost:8080/hello/db/delete/one2?username=name&password=pass2" -H 'hello_apikey:utoipa-rocks'
   curl -i "http://localhost:8080/hello/db/delete/many" -H 'hello_apikey:utoipa-rocks'
+
+  # 유저 정보 가져오기
+  curl 'http://localhost:8080/api/user/get?id=null&username=null&password=null'
+
+  # 유저 회원가입
+  curl http://localhost:8080/api/user/post \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": null,
+    "password": null,
+    "username": null
+  }'
+
+  # 유저 정보 변경
+  curl http://localhost:8080/api/user/put \
+  --request PUT \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": null,
+    "password": null,
+    "username": null
+  }'
+
+  # 유저 삭제 (id만 받아도 됨)
+  curl http://localhost:8080/api/user/delete \
+  --request DELETE \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id": null,
+    "password": null,
+    "username": null
+  }'
+
+  # Jwt 토큰 발급
+  curl -X POST "http://localhost:8080/api/auth/login" -H "Content-Type: application/json" -d '{ "username":"dolto", "password":"1234" } '
+
+  # Jwt 토큰 사용
+  curl -X GET "http://localhost:8080/" \
+    -H "token"
 ```
+- 당연하지만 나중엔 회원가입을 제외한 모든 user관련 api를 jwt토큰을 통해 인증/인가를 통해서 동작하게 할 것이다
 
 #### SeaORM 마이그레이션 위치
 - /db/migrate

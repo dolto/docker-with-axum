@@ -1,4 +1,4 @@
-use crate::{entities::*, errors::AppError};
+use crate::{entities::*, utils::errors::AppError};
 use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait,

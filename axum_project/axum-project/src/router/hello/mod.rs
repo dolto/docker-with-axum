@@ -29,7 +29,6 @@ use state::*;
 
 use crate::{
     entities::users,
-    errors::AppError,
     router::hello::{
         database::{
             hello_delete_by_id, hello_delete_by_model, hello_delete_many, hello_insert_many,
@@ -38,6 +37,7 @@ use crate::{
         },
         open_api::{HELLO_TAG, set_router},
     },
+    utils::errors::AppError,
 };
 
 // url 경로상 데이터를 받는 방법
