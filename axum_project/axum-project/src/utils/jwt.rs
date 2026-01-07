@@ -1,5 +1,4 @@
 use axum::{
-    Form,
     body::Body,
     http::{HeaderMap, Request},
     middleware::Next,
@@ -45,6 +44,7 @@ impl PartialEq<i32> for CurrentUser {
     }
 }
 
+// jwt 시드
 lazy_static! {
     static ref SECRET_KEY: String = env::var("SECRET_KEY").expect("SECRET_KEY must be set");
 }

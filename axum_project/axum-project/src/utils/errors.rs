@@ -81,6 +81,12 @@ impl From<&str> for AppError {
         AppError::new(StatusCode::UNAUTHORIZED, value)
     }
 }
+impl From<axum::Error> for AppError {
+    fn from(value: axum::Error) -> Self {
+        error!("Axum Error! {:?}", value);
+        AppError::any_error()
+    }
+}
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         (self.code, Json(self.message)).into_response()

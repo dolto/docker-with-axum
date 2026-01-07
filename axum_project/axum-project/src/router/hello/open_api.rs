@@ -21,6 +21,7 @@ pub(super) const HELLO_TAG: &str = "hello";
 )]
 pub(super) struct ApiDoc;
 
+// Api키는 이런식으로 하지만, 서버에선 auth.rs의 SecurityAddon을 활용한다
 struct SecurityAddon;
 
 impl Modify for SecurityAddon {

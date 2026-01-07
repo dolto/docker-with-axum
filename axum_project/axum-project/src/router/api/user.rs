@@ -8,16 +8,14 @@ use sea_orm::{
     FromQueryResult, QueryFilter, TryIntoModel,
 };
 use serde::{Deserialize, Serialize};
-use utoipa::{
-    IntoParams, Modify, OpenApi, ToSchema,
-    openapi::security::{HttpBuilder, SecurityScheme},
-};
+use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_redoc::{Redoc, Servable as RedocServable};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::{
     entities::users,
+    router::api::auth::SecurityAddon,
     utils::{errors::AppError, hash::hash_password, jwt::CurrentUser},
 };
 
@@ -254,24 +252,6 @@ async fn delete_user(
     )
 )]
 pub(super) struct ApiDoc;
-
-struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        if let Some(components) = openapi.components.as_mut() {
-            components.add_security_scheme(
-                "api_jwt_token",
-                SecurityScheme::Http(
-                    HttpBuilder::new()
-                        .scheme(utoipa::openapi::security::HttpAuthScheme::Bearer)
-                        .bearer_format("JWT")
-                        .build(),
-                ),
-            );
-        }
-    }
-}
 
 // 인증이 필요한 라우터 모음
 // 인증이 필요 없는 라우터모음으로 나눔

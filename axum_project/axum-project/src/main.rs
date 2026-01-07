@@ -3,6 +3,7 @@ use axum_project::database::init_db;
 use axum_project::middle::{init_middel_ware, time_out_test};
 use axum_project::router::api::{self, auth};
 use axum_project::router::hello::*;
+use axum_project::ws;
 
 #[tokio::main]
 async fn main() {
@@ -16,17 +17,18 @@ async fn main() {
     );
 
     let api_routers = api::init_route(db.clone());
-
+    let ws_routers = ws::init_router(db.clone());
     let hello_router = hello_router(db.clone());
     let login_router = auth::init_router(db.clone());
 
     let no_auth_router = Router::new()
         .nest("/hello", hello_router)
         .nest("/api/auth", login_router)
-        .nest("/api", api_routers.unauth)
+        .merge(api_routers.unauth)
+        .merge(ws_routers.unauth)
         .route("/middle/test", get(time_out_test));
 
-    let auth_router = Router::new().nest("/api", api_routers.auth);
+    let auth_router = Router::new().merge(api_routers.auth).merge(ws_routers.auth);
 
     let app = base_router.merge(auth_router);
 

@@ -7,6 +7,14 @@ pub struct ApiRouters {
     pub auth: Router,
     pub unauth: Router,
 }
+impl ApiRouters {
+    fn new_nest(self, url: &str) -> Self {
+        Self {
+            auth: Router::new().nest(url, self.auth),
+            unauth: Router::new().nest(url, self.unauth),
+        }
+    }
+}
 impl From<(Router, Router)> for ApiRouters {
     fn from(value: (Router, Router)) -> Self {
         ApiRouters {
@@ -17,5 +25,5 @@ impl From<(Router, Router)> for ApiRouters {
 }
 
 pub fn init_route(db: sea_orm::DatabaseConnection) -> ApiRouters {
-    user::init_route(db.clone()).into()
+    ApiRouters::from(user::init_route(db.clone())).new_nest("/api")
 }

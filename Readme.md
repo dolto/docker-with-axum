@@ -39,6 +39,7 @@
 │           ├── lib.rs
 │           ├── main.rs
 │           ├── middle.rs
+│           ├── open_api.rs
 │           ├── router
 │           │   ├── api
 │           │   │   ├── auth.rs
@@ -50,10 +51,12 @@
 │           │   │   ├── open_api.rs
 │           │   │   └── state.rs
 │           │   └── mod.rs
-│           └── utils
-│               ├── errors.rs
-│               ├── hash.rs
-│               ├── jwt.rs
+│           ├── utils
+│           │   ├── errors.rs
+│           │   ├── hash.rs
+│           │   ├── jwt.rs
+│           │   └── mod.rs
+│           └── ws
 │               └── mod.rs
 ├── db
 │   ├── Dockerfile
