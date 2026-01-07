@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
+use tracing::log::LevelFilter;
 
 pub const DB_ERR_MESSAGE: &str = "Somthing is wrong about Database";
 pub async fn init_db() -> Result<DatabaseConnection, DbErr> {
@@ -26,7 +27,7 @@ pub async fn init_db() -> Result<DatabaseConnection, DbErr> {
         // SQLx로깅 활성화
         .sqlx_logging(true)
         // SQLx로그 레벨 설정
-        .sqlx_logging_level(log::LevelFilter::Info)
+        .sqlx_logging_level(LevelFilter::Info)
         .set_schema_search_path("public");
     // Postgres DB이름이 axum이지 스키마가 아니다. 보통 기본 스키마는 public이다
     // .set_schema_search_path("axum");

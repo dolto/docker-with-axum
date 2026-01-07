@@ -24,7 +24,7 @@ impl AppError {
     pub fn get_db_error() -> AppError {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, DB_ERR_MESSAGE)
     }
-    fn auth_error() -> Self {
+    pub fn auth_error() -> Self {
         Self::new(StatusCode::UNAUTHORIZED, "error validating token")
     }
     pub fn any_error() -> Self {

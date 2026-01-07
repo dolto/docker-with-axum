@@ -1,7 +1,11 @@
-use axum::Json;
 use axum::extract::State;
+use axum::{Json, Router};
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use utoipa::{OpenApi, ToSchema};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use utoipa_scalar::{Scalar, Servable};
 
 use crate::utils::errors::AppError;
 
@@ -9,13 +13,25 @@ use crate::entities::users;
 use crate::utils::hash::verify_password;
 use crate::utils::jwt::create_token;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct RequestUser {
     username: String,
     password: String,
 }
 
-pub async fn login(
+#[utoipa::path(
+    path = "",
+    post,
+    tag = TAG,
+    request_body(
+        content = RequestUser,
+        content_type = mime::APPLICATION_JSON.as_ref()
+    ),
+    responses(
+        (status=StatusCode::OK, body=String, example="jwt token")
+    )
+)]
+async fn login(
     State(db): State<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
 ) -> Result<String, AppError> {
@@ -26,7 +42,7 @@ pub async fn login(
     match user {
         Some(user) => {
             let _ = verify_password(&request_user.password, &user.password)?;
-            Ok(create_token(user.username.clone())?)
+            Ok(create_token(user.id)?)
         }
         None => Err(DbErr::RecordNotFound(format!(
             "{} user name not found!",
@@ -34,4 +50,29 @@ pub async fn login(
         ))
         .into()),
     }
+}
+
+// OpenAPI
+const TAG: &str = "AUTH";
+#[derive(OpenApi)]
+#[openapi(
+    servers(
+        (url = "/api/auth", description = "Login API base path")
+    ),
+    tags(
+        (name = TAG, description = "Get JWT Token")
+    )
+)]
+struct ApiDoc;
+
+pub fn init_router(db: DatabaseConnection) -> Router {
+    let open_router = OpenApiRouter::new().routes(routes!(login)).with_state(db);
+
+    let (router, login_api) = open_router.split_for_parts();
+    let mut api = ApiDoc::openapi();
+    api.merge(login_api);
+
+    let router = router.merge(Scalar::with_url("/doc/scalar", api));
+
+    router
 }

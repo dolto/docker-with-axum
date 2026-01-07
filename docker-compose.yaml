@@ -28,7 +28,7 @@ services:
     working_dir: /home/app
     volumes:
       - ./axum_project/axum-project:/home/app
-      - /app/target
+      - /home/app/target
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
     ports:
