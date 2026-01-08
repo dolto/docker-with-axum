@@ -57,7 +57,9 @@
 │           │   ├── jwt.rs
 │           │   └── mod.rs
 │           └── ws
-│               └── mod.rs
+│               ├── chat.rs
+│               ├── mod.rs
+│               └── state.rs
 ├── db
 │   ├── Dockerfile
 │   └── migration
@@ -279,4 +281,6 @@ POSTGRES_PASSWORD=dolto
   docker compose run --rm sea-orm-downer
   # 마이그레이션 모델 생성 sea-orm-cli generate entity -o src/entities
   docker compose run --rm sea-orm-entity
+  # 마이그레이션 생성 (이름은 update)
+  docker compose run --rm sea-orm-cli
 ```

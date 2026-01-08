@@ -86,6 +86,21 @@ services:
     networks:
       - backend
 
+  sea-orm-cli:
+    image: sea-orm:dev
+    profiles: ["create_migrate"]
+    container_name: sea-orm-entity
+    env_file:
+      - ./env_files/DB_URL.env
+    working_dir: /home/app
+    volumes:
+      - ./db:/home/app
+    command: ["sea-orm-cli", "migrate", "generate", "update"]
+    # environment:
+    #   DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - backend
+
 volumes:
   db-data:
     name: axum-postgres-db-data
