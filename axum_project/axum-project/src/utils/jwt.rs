@@ -49,7 +49,7 @@ pub fn create_token(user_id: i32, username: String) -> Result<String, AppError> 
     // 현재시간
     let now = chrono::Utc::now();
     // 토큰 만료시간
-    let expires_at = now + Duration::hours(1);
+    let expires_at = now + Duration::minutes(15);
     let exp = expires_at.timestamp() as u64;
     // 사용자 이름과, 만료시간을 구조체로 저장
     let claims = Claims {
