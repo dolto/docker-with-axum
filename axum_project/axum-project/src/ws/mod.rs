@@ -1,5 +1,6 @@
+mod chat;
+mod state;
 use axum::{
-    Router,
     extract::{
         WebSocketUpgrade,
         ws::{Message, WebSocket},
@@ -13,9 +14,12 @@ use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_scalar::{Scalar, Servable};
 
-use crate::router::api::{ApiRouters, auth::SecurityAddon};
+use crate::{
+    router::api::{ApiRouters, auth::SecurityAddon},
+    ws::state::init_state,
+};
 
-const TAG: &str = "WebSocket";
+pub const TAG: &str = "WebSocket";
 #[derive(OpenApi)]
 #[openapi(
     servers(
@@ -28,7 +32,8 @@ struct ApiDoc;
 pub fn init_router(db: DatabaseConnection) -> ApiRouters {
     let auth_router = OpenApiRouter::new()
         .routes(routes!(websocket_handler))
-        .with_state(db.clone());
+        .routes(routes!(chat::chat_ws_handler))
+        .with_state(init_state());
 
     let unauth_router = OpenApiRouter::new().with_state(db);
 
@@ -41,11 +46,11 @@ pub fn init_router(db: DatabaseConnection) -> ApiRouters {
 
     let unauth_router = unauth_router.merge(Scalar::with_url("/doc/scalar", api));
 
-    (
-        Router::new().nest("/ws", auth_router),
-        Router::new().nest("/ws", unauth_router),
-    )
-        .into()
+    ApiRouters {
+        auth: auth_router,
+        unauth: unauth_router,
+    }
+    .new_nest("/ws")
 }
 
 // curl -i -N \

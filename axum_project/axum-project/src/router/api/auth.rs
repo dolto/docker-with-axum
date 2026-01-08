@@ -60,7 +60,7 @@ async fn login(
     match user {
         Some(user) => {
             let _ = verify_password(&request_user.password, &user.password)?;
-            Ok(create_token(user.id)?)
+            Ok(create_token(user.id, user.username)?)
         }
         None => Err(DbErr::RecordNotFound(format!(
             "{} user name not found!",

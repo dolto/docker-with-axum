@@ -8,10 +8,16 @@ pub struct ApiRouters {
     pub unauth: Router,
 }
 impl ApiRouters {
-    fn new_nest(self, url: &str) -> Self {
+    pub fn new_nest(self, url: &str) -> Self {
         Self {
             auth: Router::new().nest(url, self.auth),
             unauth: Router::new().nest(url, self.unauth),
+        }
+    }
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            auth: self.auth.merge(other.auth),
+            unauth: self.unauth.merge(other.unauth),
         }
     }
 }
