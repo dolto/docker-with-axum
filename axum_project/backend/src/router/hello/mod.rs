@@ -20,6 +20,7 @@ use axum_extra::{
 use reqwest::Client;
 use sea_orm::{ColumnTrait, Condition, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+use shared::dto::user::UserDTO;
 use std::fmt::Write;
 use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
@@ -591,22 +592,6 @@ async fn hello_proxy(
     Ok((StatusCode::from_u16(code).unwrap(), body))
 }
 
-// DB
-#[derive(Serialize, Deserialize, ToSchema)]
-struct UserDTO {
-    id: i32,
-    username: String,
-    password: String,
-}
-impl From<users::Model> for UserDTO {
-    fn from(value: users::Model) -> Self {
-        UserDTO {
-            id: value.id,
-            username: value.username,
-            password: value.password,
-        }
-    }
-}
 #[derive(Deserialize, IntoParams)]
 struct HelloUserCondition {
     id: Option<i32>,

@@ -27,7 +27,7 @@ services:
       - ./env_files/DEV.env
     working_dir: /home/app
     volumes:
-      - ./axum_project/axum-project:/home/app
+      - ./axum_project:/home/app
       - /home/app/target
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
@@ -82,7 +82,7 @@ services:
     working_dir: /home/app
     command: ["sea-orm-cli", "generate", "entity", "-o", "src/entities", "--with-serde", "both"]
     volumes:
-      - ./axum_project/axum-project:/home/app
+      - ./axum_project/backend:/home/app
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
     networks:

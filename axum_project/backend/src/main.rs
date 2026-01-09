@@ -1,9 +1,15 @@
+mod database;
+mod entities;
+mod middle;
+mod router;
+mod utils;
+mod ws;
+
 use axum::{Router, routing::get};
-use axum_project::database::init_db;
-use axum_project::middle::{init_middel_ware, time_out_test};
-use axum_project::router::api::{self, auth};
-use axum_project::router::hello::*;
-use axum_project::ws;
+use database::init_db;
+use middle::{init_middel_ware, time_out_test};
+use router::api::{self, auth};
+use router::hello::*;
 
 #[tokio::main]
 async fn main() {

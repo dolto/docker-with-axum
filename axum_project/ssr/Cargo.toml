@@ -1,0 +1,18 @@
+[package]
+name = "ssr"
+version = "0.1.0"
+authors = ["dolot <doolto10@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+shared = {path = "../shared"}
+dioxus = { version = "0.7.2", features = ["router", "fullstack", "wasm-split", "ssr", "server"] }
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+server = ["dioxus/server"]

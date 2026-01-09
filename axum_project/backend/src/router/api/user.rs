@@ -8,6 +8,7 @@ use sea_orm::{
     FromQueryResult, QueryFilter, TryIntoModel,
 };
 use serde::{Deserialize, Serialize};
+use shared::dto::user::UserDTO;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_redoc::{Redoc, Servable as RedocServable};
@@ -19,12 +20,6 @@ use crate::{
     utils::{errors::AppError, hash::hash_password, jwt::CurrentUser},
 };
 
-#[derive(Serialize, Deserialize, ToSchema)]
-struct UserDTO {
-    id: i32,
-    username: String,
-    password: String,
-}
 impl From<users::Model> for UserDTO {
     fn from(value: users::Model) -> Self {
         UserDTO {
