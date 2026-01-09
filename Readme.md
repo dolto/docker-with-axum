@@ -84,7 +84,8 @@
 ```sh
 └── env_files
     ├── DB_ADMIN.env
-    └── DB_URL.env
+    ├── DB_URL.env
+    └── DEV.env
 ```
 2. 환경변수 설정(예시)
 ```DB_URL.env
@@ -95,6 +96,21 @@ POSTGRES_USER=dolto
 POSTGRES_DB=dolto
 POSTGRES_PASSWORD=dolto
 ```
+```DEV.env
+RUST_LOG=debug
+SECRET_KEY=1234
+```
+3. docker compose 환경변수 설정 (.env)
+- 터미널에서 현재 유저의 uid와 gid를 구한다 (유저 아이디, 그룹 아이디)
+```sh
+  id -u
+  id -g
+```
+- 두 아이디번호를 다음과 같이 입력해준다
+```.env
+CURRENT_USER=1000:1000
+```
+- 마이그레이션, upper등 파일을 생성해주는 컨테이너가 root가 아닌 사용자 권한으로 생성해주기 때문에, 권한 에러를 방지할 수 있다
 3. ```docker compose --file docker-compose.yaml up --detach```
 4. 생성된 컨테이너 두개를 확인
 ```sh

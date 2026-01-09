@@ -60,6 +60,7 @@ services:
     image: sea-orm:dev
     profiles: ["migration-downer"]
     container_name: sea-orm-downer
+    user: "${CURRENT_USER}"
     env_file:
       - ./env_files/DB_URL.env
     working_dir: /home/app
