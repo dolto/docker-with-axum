@@ -75,6 +75,7 @@ services:
     image: sea-orm:dev
     profiles: ["generation-entity"]
     container_name: sea-orm-entity
+    user: "${CURRENT_USER}"
     env_file:
       - ./env_files/DB_URL.env
     working_dir: /home/app

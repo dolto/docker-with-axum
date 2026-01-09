@@ -4,4 +4,5 @@ pub mod prelude;
 
 pub mod category;
 pub mod product;
+pub mod refresh_token;
 pub mod users;

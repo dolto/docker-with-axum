@@ -19,6 +19,22 @@ use crate::{
     utils::{errors::AppError, hash::hash_password, jwt::CurrentUser},
 };
 
+#[derive(Serialize, Deserialize, ToSchema)]
+struct UserDTO {
+    id: i32,
+    username: String,
+    password: String,
+}
+impl From<users::Model> for UserDTO {
+    fn from(value: users::Model) -> Self {
+        UserDTO {
+            id: value.id,
+            username: value.username,
+            password: value.password,
+        }
+    }
+}
+
 #[derive(Deserialize, ToSchema, IntoParams)]
 struct UpsertUser {
     id: Option<i32>,
@@ -34,22 +50,22 @@ struct ReadUser {
 }
 
 impl UpsertUser {
-    async fn update_user(&mut self, db: &DatabaseConnection) -> Result<users::Model, AppError> {
+    async fn update_user(&mut self, db: &DatabaseConnection) -> Result<UserDTO, AppError> {
         self.id.ok_or("can't found update target")?;
-        self.create_user(db).await
+        Ok(self.create_user(db).await?.into())
     }
-    async fn create_user(&mut self, db: &DatabaseConnection) -> Result<users::Model, AppError> {
+    async fn create_user(&mut self, db: &DatabaseConnection) -> Result<UserDTO, AppError> {
         self.password = Some(hash_password(
             &self.password.take().ok_or("password is not avalable")?,
         )?);
 
-        self.create_user_nonhash(db).await
+        self.create_user_nonhash(db).await.into()
     }
-    async fn create_user_nonhash(&self, db: &DatabaseConnection) -> Result<users::Model, AppError> {
+    async fn create_user_nonhash(&self, db: &DatabaseConnection) -> Result<UserDTO, AppError> {
         let new_user = users::ActiveModel::try_from(self)?;
         // let new_user: users::ActiveModel = self.try_into()?;
         // 업데이트일수도 있으므로
-        Ok(new_user.save(db).await?.try_into_model()?)
+        Ok(new_user.save(db).await?.try_into_model()?.into())
     }
 
     async fn get_users(&self, db: &DatabaseConnection) -> Result<Vec<ReadUser>, AppError> {
@@ -146,14 +162,14 @@ const TAG: &str = "USER";
     responses (
         (
             status = StatusCode::CREATED,
-            body = users::Model,
+            body = UserDTO,
         )
     )
 )]
 async fn post_user(
     State(conn): State<DatabaseConnection>,
     Json(mut user): Json<UpsertUser>,
-) -> Result<(StatusCode, Json<users::Model>), AppError> {
+) -> Result<(StatusCode, Json<UserDTO>), AppError> {
     Ok((StatusCode::CREATED, Json(user.create_user(&conn).await?)))
 }
 
@@ -192,7 +208,7 @@ async fn find_users(
     responses (
         (
             status = StatusCode::OK,
-            body = users::Model,
+            body = UserDTO,
         )
     ),
     security(
@@ -203,7 +219,7 @@ async fn put_user(
     State(conn): State<DatabaseConnection>,
     Extension(id): Extension<CurrentUser>,
     Json(mut user): Json<UpsertUser>,
-) -> Result<Json<users::Model>, AppError> {
+) -> Result<Json<UserDTO>, AppError> {
     // 본인만 변경 가능함
     Ok(if is_edit_user(&id, &user).await? {
         Ok(Json(user.update_user(&conn).await?))

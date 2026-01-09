@@ -35,6 +35,7 @@
 │           │   ├── mod.rs
 │           │   ├── prelude.rs
 │           │   ├── product.rs
+│           │   ├── refresh_token.rs
 │           │   └── users.rs
 │           ├── lib.rs
 │           ├── main.rs
@@ -69,6 +70,7 @@
 │       └── src
 │           ├── lib.rs
 │           ├── m20251228_110826_create_table.rs
+│           ├── m20260109_003305_update.rs
 │           └── main.rs
 ├── docker-compose.yaml
 └── env_files
@@ -123,142 +125,16 @@ POSTGRES_PASSWORD=dolto
 ##### Debug 를 위한 #[debug_handler]
 - 핸들러 함수에 다음 어노테이션을 걸면, 컴파일시 발생하는 에러를 더 명확하게 알 수 있다
 
-#### 테스트 curl 정보
-- OpenAi 문서 링크
-- /api/user/doc/scalar (or redoc)
-- /hello/scalar (or redoc)
-- 밑의 curl도 가능하지만, scalar나 redoc으로 api를 확인할 밑 테스트 할 수 있다
+#### open api 테스트
 - <img width="844" height="558" alt="image" src="https://github.com/user-attachments/assets/0e9c46cc-4045-41de-967d-fd7813840dea" />
 - <img width="909" height="400" alt="image" src="https://github.com/user-attachments/assets/7c2b2783-cfc1-41b4-96b1-5ff168a1dee7" />
-```sh
-  # Path & Parameter
-  curl -X GET "http://localhost:8080/hello/path/1/dolto"
-  curl -X GET "http://localhost:8080/hello/param1?id=12&name=dolto"
-  curl -X GET "http://localhost:8080/hello/param2?id=22&name=dolto"
-
-  # Body Text & Bytes
-  curl -X POST "http://localhost:8080/hello/text" -d "dolto"
-  curl -X POST "http://localhost:8080/hello/bytes" -d "dolto"
-
-  # Body Json & Form
-  curl -X POST "http://localhost:8080/hello/json" -H "Content-Type: application/json" -d '{"name":"dolto"}'
-  curl -X POST "http://localhost:8080/hello/form" -H "Content-Type: application/x-www-form-urlencoded" -d "name=dolto"
-
-  # Body FormData (file & Form)
-  curl -X POST "http://localhost:8080/hello/file" -F "readme.md=@Readme.md" -F "dolto=dolto"
-
-  # Header
-  curl -X GET "http://localhost:8080/hello/header" -H "Content-Type: text/plain" -d "dolto"
-
-  # Json Response
-  curl -X GET "http://localhost:8080/hello/json_response"
-
-  # StatusCode Response
-  curl -X GET "http://localhost:8080/hello/status_code" -i
-
-  # Rest API Response (Header ,(StatusCode, Data))
-  curl -X GET "http://localhost:8080/hello/rest_api" -i
-
-  # State
-  curl -X GET "http://localhost:8080/hello/state_count"
-  curl -X GET "http://localhost:8080/hello/state_app_name"
-  curl -X GET "http://localhost:8080/hello/state_app_users"
-  curl -X GET "http://localhost:8080/hello/extension_users"
-
-  # Hello Proxy
-  curl -X POST "http://localhost:8080/hello/proxy" -H "Content-Type: application/json" -d '{"breed":"chihuahua", "num_pics":3}'
-
-  # Hello User Database
-  # Insert
-  curl -i "http://localhost:8080/hello/db/insert?command=one1&username=user&password=pass1" -H 'hello_apikey:utoipa-rocks'
-  curl -i "http://localhost:8080/hello/db/insert?command=one2&username=user&password=pass2" -H 'hello_apikey:utoipa-rocks'
-  curl -i -X POST "http://localhost:8080/hello/db/insert_many" \
-  -H "Content-Type: application/json" \
-  -H 'hello_apikey:utoipa-rocks' \
-  -d '[
-    {"username":"erin","password":"pass5"},
-    {"username":"frank","password":"pass6"},
-    {"username":"gina","password":"pass7"}
-  ]'
-
-  # Select
-  curl -X GET "http://localhost:8080/hello/db/select" -i
-  curl -X GET "http://localhost:8080/hello/db/select?id=1" -i
-  # 섞어 쓸 수도 있음
-  curl -X GET "http://localhost:8080/hello/db/select?like_user=dolto" -i
-  curl -X GET "http://localhost:8080/hello/db/select?like_pass=1234" -i
-  curl -i "http://localhost:8080/hello/db/select?gt_id=1&lt_id=10"
-  curl -i "http://localhost:8080/hello/db/select?limit=2"
-
-  # Update (모델을 가져오든 id로 가져오든 결국 pk를 기준으로 변경하는듯)
-  curl -i -X POST "http://localhost:8080/hello/db/update/one1" \
-  -H "Content-Type: application/json" \
-  -H 'hello_apikey:utoipa-rocks'
-  -d '{
-    "model":  { "id": 23, "username": "alice", "password": "pass1" },
-    "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
-  }'
-  curl -i -X POST "http://localhost:8080/hello/db/update/one2" \
-  -H "Content-Type: application/json" \
-  -H 'hello_apikey:utoipa-rocks'
-  -d '{
-    "model":  { "id": 23, "username": "alice", "password": "pass1" },
-    "change_model": { "id": 23, "username": "alice_updated", "password": "pass1" }
-  }'
-  curl -i -X POST "http://localhost:8080/hello/db/update/many" \
-  -H "Content-Type: application/json" \
-  -H 'hello_apikey:utoipa-rocks'
-  -d '{
-    "model": { "id": 0, "username": "dummy", "password": "dummy" },
-    "change_model": { "id": 0, "username": "GLOBAL_UPDATED", "password": "global_pw" }
-  }'
-
-  # Delete
-  curl -i "http://localhost:8080/hello/db/delete/one1?id=1" -H 'hello_apikey:utoipa-rocks'
-  curl -i "http://localhost:8080/hello/db/delete/one2?username=name&password=pass2" -H 'hello_apikey:utoipa-rocks'
-  curl -i "http://localhost:8080/hello/db/delete/many" -H 'hello_apikey:utoipa-rocks'
-
-  # 유저 정보 가져오기
-  curl 'http://localhost:8080/api/user/get?id=null&username=null&password=null'
-
-  # 유저 회원가입
-  curl http://localhost:8080/api/user/post \
-  --request POST \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "id": null,
-    "password": null,
-    "username": null
-  }'
-
-  # 유저 정보 변경
-  curl http://localhost:8080/api/user/put \
-  --request PUT \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "id": null,
-    "password": null,
-    "username": null
-  }'
-
-  # 유저 삭제 (id만 받아도 됨)
-  curl http://localhost:8080/api/user/delete \
-  --request DELETE \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "id": null,
-    "password": null,
-    "username": null
-  }'
-
-  # Jwt 토큰 발급
-  curl -X POST "http://localhost:8080/api/auth/login" -H "Content-Type: application/json" -d '{ "username":"dolto", "password":"1234" } '
-
-  # Jwt 토큰 사용
-  curl -X GET "http://localhost:8080/" \
-    -H "token"
-```
-- 당연하지만 나중엔 회원가입을 제외한 모든 user관련 api를 jwt토큰을 통해 인증/인가를 통해서 동작하게 할 것이다
+##### 도메인 목록
+- OpenAi 문서 링크
+- /도메인/doc/scalar (or redoc)
+- api/auth
+- api/user
+- ws
+- 예외적으로 hello는 hello/scalar에 위치해있다
 
 #### SeaORM 마이그레이션 위치
 - /db/migrate

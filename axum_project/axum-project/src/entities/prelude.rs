@@ -2,4 +2,5 @@
 
 pub use super::category::Entity as Category;
 pub use super::product::Entity as Product;
+pub use super::refresh_token::Entity as RefreshToken;
 pub use super::users::Entity as Users;

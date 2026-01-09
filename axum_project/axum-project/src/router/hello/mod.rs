@@ -592,6 +592,21 @@ async fn hello_proxy(
 }
 
 // DB
+#[derive(Serialize, Deserialize, ToSchema)]
+struct UserDTO {
+    id: i32,
+    username: String,
+    password: String,
+}
+impl From<users::Model> for UserDTO {
+    fn from(value: users::Model) -> Self {
+        UserDTO {
+            id: value.id,
+            username: value.username,
+            password: value.password,
+        }
+    }
+}
 #[derive(Deserialize, IntoParams)]
 struct HelloUserCondition {
     id: Option<i32>,
@@ -609,7 +624,7 @@ struct HelloUserCondition {
     responses(
         (
             status = 200,
-            body = users::Model,
+            body = UserDTO,
         ),
         (
             status = StatusCode::INTERNAL_SERVER_ERROR,
@@ -627,13 +642,13 @@ async fn hello_user_select(
     Query(opt): Query<HelloUserCondition>,
     State(pool): State<DatabaseConnection>,
     headers: HeaderMap,
-) -> Result<Json<Vec<users::Model>>, AppError> {
+) -> Result<Json<Vec<UserDTO>>, AppError> {
     match check_api_key(false, headers) {
         Ok(_) => {}
         Err(err) => return Err(err),
     }
     if let Some(id) = opt.id {
-        return Ok(Json(vec![hello_select_one(&pool, id).await?]));
+        return Ok(Json(vec![hello_select_one(&pool, id).await?.into()]));
     }
 
     let mut condition = Condition::all();
@@ -657,7 +672,7 @@ async fn hello_user_select(
     }
 
     let result = hello_select_all(&pool, condition, opt.limit).await?;
-    Ok(Json(result))
+    Ok(Json(result.into_iter().map(|v| v.into()).collect()))
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -761,7 +776,7 @@ async fn hello_user_insert_many(
 #[derive(Deserialize, ToSchema)]
 struct HelloUserUpdateCommand {
     model: Option<HelloUserDeleteCommand>,
-    change_model: users::Model,
+    change_model: UserDTO,
 }
 #[utoipa::path(
     post,

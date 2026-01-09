@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use axum::{Json, response::IntoResponse};
 use bcrypt::BcryptError;
+use jsonwebtoken::errors::ErrorKind;
 use reqwest::{StatusCode, header::ToStrError};
 use sea_orm::DbErr;
 use tracing::error;
@@ -56,6 +57,16 @@ impl From<jsonwebtoken::errors::Error> for AppError {
     fn from(value: jsonwebtoken::errors::Error) -> Self {
         error!("JWT Error {:?}", value);
         match value.kind() {
+            jsonwebtoken::errors::ErrorKind::InvalidToken
+            | jsonwebtoken::errors::ErrorKind::InvalidSignature
+            | jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::auth_error(),
+            _ => AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "token error!"),
+        }
+    }
+}
+impl From<jsonwebtoken::errors::ErrorKind> for AppError {
+    fn from(value: jsonwebtoken::errors::ErrorKind) -> Self {
+        match value {
             jsonwebtoken::errors::ErrorKind::InvalidToken
             | jsonwebtoken::errors::ErrorKind::InvalidSignature
             | jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::auth_error(),
