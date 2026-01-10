@@ -14,25 +14,50 @@ services:
     networks:
       - backend
 
-  axum-dev:
+  axum-backend-dev:
     depends_on:
       - db
     build:
       context: ./axum_project
       dockerfile: Dockerfile
     image: axum:dev
-    container_name: axum-dev
+    container_name: axum-backend-dev
     env_file:
       - ./env_files/DB_URL.env
       - ./env_files/DEV.env
     working_dir: /home/app
+    # command: ["cargo", "watch", "-w", "backend", "-w", "shared","-x", "run", "--bin", "backend"]
+    command: cargo watch -w backend -w shared -x "run --bin backend"
     volumes:
       - ./axum_project:/home/app
       - /home/app/target
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
     ports:
-      - 8080:8000
+      - 8081:8000
+    networks:
+      - backend
+
+  axum-client-dev:
+    depends_on:
+      - db
+    build:
+      context: ./axum_project
+      dockerfile: Dockerfile
+    image: axum:dev
+    container_name: axum-client-dev
+    env_file:
+      - ./env_files/DB_URL.env
+      - ./env_files/DEV.env
+    working_dir: /home/app
+    # command: cargo watch -w ssr -w shared -x "run --bin ssr"
+    # command: cargo watch -w ssr -w shared -s "dx serve --server --package ssr --addr 0.0.0.0 --port 8001"
+    command: dx serve --server --package ssr --addr 0.0.0.0 --port 8001
+    volumes:
+      - ./axum_project:/home/app
+      - /home/app/target
+    ports:
+      - 8080:8001
     networks:
       - backend
 

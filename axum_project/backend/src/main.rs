@@ -1,5 +1,4 @@
 mod database;
-mod entities;
 mod middle;
 mod router;
 mod utils;

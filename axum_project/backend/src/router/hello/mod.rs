@@ -26,10 +26,10 @@ use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use shared::entities::users;
 use state::*;
 
 use crate::{
-    entities::users,
     router::hello::{
         database::{
             hello_delete_by_id, hello_delete_by_model, hello_delete_many, hello_insert_many,

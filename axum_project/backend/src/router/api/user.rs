@@ -9,26 +9,16 @@ use sea_orm::{
 };
 use serde::{Deserialize, Serialize};
 use shared::dto::user::UserDTO;
+use shared::entities::users;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_redoc::{Redoc, Servable as RedocServable};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::{
-    entities::users,
     router::api::auth::SecurityAddon,
     utils::{errors::AppError, hash::hash_password, jwt::CurrentUser},
 };
-
-impl From<users::Model> for UserDTO {
-    fn from(value: users::Model) -> Self {
-        UserDTO {
-            id: value.id,
-            username: value.username,
-            password: value.password,
-        }
-    }
-}
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 struct UpsertUser {

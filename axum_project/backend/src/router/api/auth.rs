@@ -11,9 +11,9 @@ use utoipa_scalar::{Scalar, Servable};
 
 use crate::utils::errors::AppError;
 
-use crate::entities::{refresh_token, users};
 use crate::utils::hash::verify_password;
 use crate::utils::jwt::{create_token, validate_jwt_token_without_exp, validate_refresh_token};
+use shared::entities::{refresh_token, users};
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct RequestUser {

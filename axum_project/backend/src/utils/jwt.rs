@@ -13,7 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::{env, str::FromStr};
 use tracing::debug;
 
-use crate::{entities::refresh_token, utils::errors::AppError};
+use crate::utils::errors::AppError;
+use shared::entities::refresh_token;
 
 // User 인증 토큰
 #[derive(Serialize, Deserialize)]

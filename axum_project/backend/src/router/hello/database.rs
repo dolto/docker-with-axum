@@ -1,4 +1,4 @@
-use crate::{entities::*, utils::errors::AppError};
+use crate::utils::errors::AppError;
 use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait,
@@ -7,6 +7,7 @@ use sea_orm::{
     QueryFilter, QueryOrder, QuerySelect, UpdateResult,
     prelude::Expr,
 };
+use shared::entities::*;
 
 // DbErr에 대해서
 // pub async fn hello_db_err(conn: &DatabaseConnection) {

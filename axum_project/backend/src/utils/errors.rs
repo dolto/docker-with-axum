@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 use axum::{Json, response::IntoResponse};
 use bcrypt::BcryptError;
-use jsonwebtoken::errors::ErrorKind;
 use reqwest::{StatusCode, header::ToStrError};
 use sea_orm::DbErr;
 use tracing::error;

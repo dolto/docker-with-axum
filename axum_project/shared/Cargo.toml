@@ -7,3 +7,4 @@ edition = "2024"
 serde = { version = "1.0.228", features = ["derive"] }
 utoipa = { version = "5.4.0" }
 manganis = {version = "0.7.2"}
+sea-orm = "1.1.19"

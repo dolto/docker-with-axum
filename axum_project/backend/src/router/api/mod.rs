@@ -7,6 +7,7 @@ pub struct ApiRouters {
     pub auth: Router,
     pub unauth: Router,
 }
+
 impl ApiRouters {
     pub fn new_nest(self, url: &str) -> Self {
         Self {
@@ -18,6 +19,13 @@ impl ApiRouters {
         Self {
             auth: self.auth.merge(other.auth),
             unauth: self.unauth.merge(other.unauth),
+        }
+    }
+
+    pub fn nest(self, other: Self, url: &str) -> Self {
+        Self {
+            auth: self.auth.nest(url, other.auth),
+            unauth: self.unauth.nest(url, other.unauth),
         }
     }
 }
