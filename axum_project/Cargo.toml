@@ -2,6 +2,6 @@
 members = [
     "backend",
     "shared",
-    "ssr", "ssr",
+    "client"
 ]
 resolver = "2"

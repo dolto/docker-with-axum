@@ -8,7 +8,10 @@ use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use lazy_static::lazy_static;
 use reqwest::header::AUTHORIZATION;
-use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_orm::{
+    DatabaseConnection, EntityTrait,
+    sea_query::{OnConflict, OnConflictUpdate},
+};
 use serde::{Deserialize, Serialize};
 use std::{env, str::FromStr};
 use tracing::debug;
@@ -97,13 +100,22 @@ pub async fn create_refresh(
 
     let res = encode(&token_header, &claims, &key)?;
 
-    refresh_token::Entity::insert(refresh_token::ActiveModel {
+    let active = refresh_token::ActiveModel {
         user_id: sea_orm::ActiveValue::Set(user_id),
         token: sea_orm::ActiveValue::Set(res.clone()),
         expires_at: sea_orm::ActiveValue::Set(exp),
-    })
-    .exec(conn)
-    .await?;
+    };
+    refresh_token::Entity::insert(active)
+        .on_conflict(
+            OnConflict::column(refresh_token::Column::Token)
+                .update_columns([
+                    refresh_token::Column::UserId,
+                    refresh_token::Column::ExpiresAt,
+                ])
+                .to_owned(),
+        )
+        .exec(conn)
+        .await?;
 
     Ok(res)
 }

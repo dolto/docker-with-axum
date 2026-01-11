@@ -1,3 +1,5 @@
+mod component;
+use component::Login;
 use dioxus::prelude::*;
 use shared::style::TACIT;
 
@@ -35,9 +37,11 @@ fn App() -> Element {
 #[component]
 pub fn Hero() -> Element {
     rsx! {
+        Login{}
         div {
             id: "hero",
             div { id: "links",
+                h1{"nothing!"}
                 a { href: "https://dioxuslabs.com/learn/0.7/", "📚 Learn Dioxus" }
                 a { href: "https://dioxuslabs.com/awesome", "🚀 Awesome Dioxus" }
                 a { href: "https://github.com/dioxus-community/", "📡 Community Libraries" }

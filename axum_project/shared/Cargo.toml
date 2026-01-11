@@ -5,6 +5,10 @@ edition = "2024"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
-utoipa = { version = "5.4.0" }
+utoipa = { version = "5.4.0", optional = true }
 manganis = {version = "0.7.2"}
-sea-orm = "1.1.19"
+sea-orm = {version = "1.1.19", optional = true}
+
+[features]
+default = []
+server = ["dep:utoipa", "dep:sea-orm"]

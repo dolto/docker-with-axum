@@ -4,13 +4,12 @@ use axum::{
 };
 use reqwest::StatusCode;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter, TryIntoModel,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
+    TryIntoModel,
 };
-use serde::{Deserialize, Serialize};
-use shared::dto::user::UserDTO;
+use shared::dto::user::{ReadUser, UpsertUser, UserDTO};
 use shared::entities::users;
-use utoipa::{IntoParams, OpenApi, ToSchema};
+use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_redoc::{Redoc, Servable as RedocServable};
 use utoipa_scalar::{Scalar, Servable};
@@ -20,21 +19,16 @@ use crate::{
     utils::{errors::AppError, hash::hash_password, jwt::CurrentUser},
 };
 
-#[derive(Deserialize, ToSchema, IntoParams)]
-struct UpsertUser {
-    id: Option<i32>,
-    username: Option<String>,
-    #[into_params(ignore)]
-    password: Option<String>,
+trait UserAction {
+    async fn update_user(&mut self, db: &DatabaseConnection) -> Result<UserDTO, AppError>;
+    async fn create_user(&mut self, db: &DatabaseConnection) -> Result<UserDTO, AppError>;
+    async fn create_user_nonhash(&self, db: &DatabaseConnection) -> Result<UserDTO, AppError>;
+    async fn get_users(&self, db: &DatabaseConnection) -> Result<Vec<ReadUser>, AppError>;
+    async fn delete_user(self, db: &DatabaseConnection) -> Result<StatusCode, AppError>;
+    fn into_active_model(value: &UpsertUser) -> Result<users::ActiveModel, AppError>;
 }
 
-#[derive(Serialize, FromQueryResult, ToSchema)]
-struct ReadUser {
-    id: i32,
-    username: String,
-}
-
-impl UpsertUser {
+impl UserAction for UpsertUser {
     async fn update_user(&mut self, db: &DatabaseConnection) -> Result<UserDTO, AppError> {
         self.id.ok_or("can't found update target")?;
         Ok(self.create_user(db).await?.into())
@@ -47,7 +41,7 @@ impl UpsertUser {
         self.create_user_nonhash(db).await.into()
     }
     async fn create_user_nonhash(&self, db: &DatabaseConnection) -> Result<UserDTO, AppError> {
-        let new_user = users::ActiveModel::try_from(self)?;
+        let new_user = UpsertUser::into_active_model(self)?;
         // let new_user: users::ActiveModel = self.try_into()?;
         // 업데이트일수도 있으므로
         Ok(new_user.save(db).await?.try_into_model()?.into())
@@ -82,12 +76,8 @@ impl UpsertUser {
             Ok(StatusCode::NO_CONTENT)
         }?)
     }
-}
-
-impl TryFrom<&UpsertUser> for users::ActiveModel {
-    type Error = AppError;
     // id가 명시되어있다면 update아니면 create
-    fn try_from(value: &UpsertUser) -> Result<Self, Self::Error> {
+    fn into_active_model(value: &UpsertUser) -> Result<users::ActiveModel, AppError> {
         let password = value
             .password
             .as_ref()

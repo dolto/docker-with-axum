@@ -3,6 +3,8 @@ use axum::{Json, Router, debug_handler};
 use reqwest::StatusCode;
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, ModelTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use shared::dto::user::{ReqUser, Tokens};
+use tracing::debug;
 use utoipa::openapi::security::{HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
@@ -14,12 +16,6 @@ use crate::utils::errors::AppError;
 use crate::utils::hash::verify_password;
 use crate::utils::jwt::{create_token, validate_jwt_token_without_exp, validate_refresh_token};
 use shared::entities::{refresh_token, users};
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct RequestUser {
-    username: String,
-    password: String,
-}
 
 pub struct SecurityAddon;
 impl Modify for SecurityAddon {
@@ -38,26 +34,12 @@ impl Modify for SecurityAddon {
     }
 }
 
-#[derive(ToSchema, Deserialize, Serialize)]
-struct Tokens {
-    jwt: String,
-    refresh: String,
-}
-impl From<(String, String)> for Tokens {
-    fn from(value: (String, String)) -> Self {
-        Tokens {
-            jwt: value.0,
-            refresh: value.1,
-        }
-    }
-}
-
 #[utoipa::path(
     path = "/login",
     post,
     tag = TAG,
     request_body(
-        content = RequestUser,
+        content = ReqUser,
         content_type = mime::APPLICATION_JSON.as_ref()
     ),
     responses(
@@ -67,18 +49,27 @@ impl From<(String, String)> for Tokens {
 #[debug_handler]
 async fn login(
     State(db): State<DatabaseConnection>,
-    Json(request_user): Json<RequestUser>,
+    Json(request_user): Json<ReqUser>,
 ) -> Result<Json<Tokens>, AppError> {
     let user = users::Entity::find()
         .filter(users::Column::Username.eq(&request_user.username))
         .one(&db)
         .await?;
+
     match user {
         Some(user) => {
             let _ = verify_password(&request_user.password, &user.password)?;
-            Ok(Json(
-                create_token(user.id, user.username, &db).await?.into(),
-            ))
+            let (jwt, refresh) = create_token(user.id, user.username.clone(), &db).await?;
+
+            Ok(Json(Tokens {
+                jwt,
+                refresh,
+                user_info: shared::dto::user::ReadUser {
+                    id: user.id,
+                    username: user.username,
+                },
+                save_id: None,
+            }))
         }
         None => Err(DbErr::RecordNotFound(format!(
             "{} user name not found!",
@@ -158,7 +149,17 @@ async fn refresh(
                 return Err(jsonwebtoken::errors::ErrorKind::ExpiredSignature.into());
             }
             model.delete(&db).await?;
-            Ok(Json(create_token(user_id, username, &db).await?.into()))
+            let (jwt, refresh) = create_token(user_id, username.clone(), &db).await?;
+
+            Ok(Json(Tokens {
+                jwt,
+                refresh,
+                user_info: shared::dto::user::ReadUser {
+                    id: user_id,
+                    username,
+                },
+                save_id: None,
+            }))
         }
         // Lazy 스케줄러가 제거했을 것임
         None => Err(jsonwebtoken::errors::ErrorKind::ExpiredSignature.into()),

@@ -19,8 +19,8 @@ services:
       - db
     build:
       context: ./axum_project
-      dockerfile: Dockerfile
-    image: axum:dev
+      dockerfile: Dockerfile.backend
+    image: axum-backend:dev
     container_name: axum-backend-dev
     env_file:
       - ./env_files/DB_URL.env
@@ -30,7 +30,7 @@ services:
     command: cargo watch -w backend -w shared -x "run --bin backend"
     volumes:
       - ./axum_project:/home/app
-      - /home/app/target
+      - /home/app/target_docker
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
     ports:
@@ -43,8 +43,8 @@ services:
       - db
     build:
       context: ./axum_project
-      dockerfile: Dockerfile
-    image: axum:dev
+      dockerfile: Dockerfile.client
+    image: axum-client:dev
     container_name: axum-client-dev
     env_file:
       - ./env_files/DB_URL.env
@@ -52,10 +52,10 @@ services:
     working_dir: /home/app
     # command: cargo watch -w ssr -w shared -x "run --bin ssr"
     # command: cargo watch -w ssr -w shared -s "dx serve --server --package ssr --addr 0.0.0.0 --port 8001"
-    command: dx serve --server --package ssr --addr 0.0.0.0 --port 8001
+    command: dx serve --web --hotpatch --package client --addr 0.0.0.0 --port 8001
     volumes:
       - ./axum_project:/home/app
-      - /home/app/target
+      - /home/app/target_docker
     ports:
       - 8080:8001
     networks:
