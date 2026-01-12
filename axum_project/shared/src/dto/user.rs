@@ -33,11 +33,12 @@ pub struct ReadUser {
     pub username: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[cfg_attr(feature = "server", derive(utoipa::ToSchema))]
 pub struct ReqUser {
     pub username: String,
     pub password: String,
+    pub save_id: Option<bool>,
 }
 
 #[cfg_attr(feature = "server", derive(utoipa::ToSchema))]
@@ -46,8 +47,6 @@ pub struct Tokens {
     pub jwt: String,
     pub refresh: String,
     pub user_info: ReadUser,
-
-    pub save_id: Option<bool>,
 }
 
 #[cfg_attr(feature = "server", derive(utoipa::ToSchema))]

@@ -50,6 +50,10 @@ services:
       - ./env_files/DB_URL.env
       - ./env_files/DEV.env
     working_dir: /home/app
+    # 반응형으로 실행
+    # docker compose attach axum-client-dev하면 됨
+    stdin_open: true
+    tty: true
     # command: cargo watch -w ssr -w shared -x "run --bin ssr"
     # command: cargo watch -w ssr -w shared -s "dx serve --server --package ssr --addr 0.0.0.0 --port 8001"
     command: dx serve --web --hotpatch --package client --addr 0.0.0.0 --port 8001

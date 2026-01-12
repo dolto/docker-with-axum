@@ -2,11 +2,9 @@ use axum::extract::State;
 use axum::{Json, Router, debug_handler};
 use reqwest::StatusCode;
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, ModelTrait, QueryFilter};
-use serde::{Deserialize, Serialize};
 use shared::dto::user::{ReqUser, Tokens};
-use tracing::debug;
 use utoipa::openapi::security::{HttpBuilder, SecurityScheme};
-use utoipa::{Modify, OpenApi, ToSchema};
+use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use utoipa_scalar::{Scalar, Servable};
@@ -68,7 +66,6 @@ async fn login(
                     id: user.id,
                     username: user.username,
                 },
-                save_id: None,
             }))
         }
         None => Err(DbErr::RecordNotFound(format!(
@@ -158,7 +155,6 @@ async fn refresh(
                     id: user_id,
                     username,
                 },
-                save_id: None,
             }))
         }
         // Lazy 스케줄러가 제거했을 것임
