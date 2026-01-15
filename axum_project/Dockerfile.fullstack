@@ -1,9 +1,9 @@
-# 현재는 안쓰지만, 혹시 dioxus spa 관심있으신 분들을 위해 남겨둠
 FROM rust:1.92.0
 
 RUN apt-get update && apt-get install -y build-essential \
-pkg-config libssl-dev curl lld && \
+pkg-config curl lld && \
 rm -rf /var/lib/apt/lists/*
 
+# RUN cargo install cargo-watch
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install dioxus-cli --version 0.7.2

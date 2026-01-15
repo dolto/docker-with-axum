@@ -14,56 +14,60 @@ services:
     networks:
       - backend
 
-  axum-backend-dev:
+  axum-fullstack-dev:
     depends_on:
       - db
     build:
       context: ./axum_project
-      dockerfile: Dockerfile.backend
-    image: axum-backend:dev
-    container_name: axum-backend-dev
+      dockerfile: Dockerfile.fullstack
+    image: axum-fullstack:dev
+    container_name: axum-fullstack-dev
     env_file:
       - ./env_files/DB_URL.env
       - ./env_files/DEV.env
     working_dir: /home/app
+    stdin_open: true
+    tty: true
     # command: ["cargo", "watch", "-w", "backend", "-w", "shared","-x", "run", "--bin", "backend"]
-    command: cargo watch -w backend -w shared -x "run --bin backend"
+    # command: cargo watch -w backend -w shared -x "run --bin backend"
+    command: dx serve --web --hotpatch --package fullstack --addr 0.0.0.0 --port 8000
     volumes:
       - ./axum_project:/home/app
       - /home/app/target_docker
     # environment:
     #   DATABASE_URL: ${DATABASE_URL}
     ports:
-      - 8081:8000
+      - 8080:8000
     networks:
       - backend
 
-  axum-client-dev:
-    depends_on:
-      - db
-    build:
-      context: ./axum_project
-      dockerfile: Dockerfile.client
-    image: axum-client:dev
-    container_name: axum-client-dev
-    env_file:
-      - ./env_files/DB_URL.env
-      - ./env_files/DEV.env
-    working_dir: /home/app
-    # 반응형으로 실행
-    # docker compose attach axum-client-dev하면 됨
-    stdin_open: true
-    tty: true
-    # command: cargo watch -w ssr -w shared -x "run --bin ssr"
-    # command: cargo watch -w ssr -w shared -s "dx serve --server --package ssr --addr 0.0.0.0 --port 8001"
-    command: dx serve --web --hotpatch --package client --addr 0.0.0.0 --port 8001
-    volumes:
-      - ./axum_project:/home/app
-      - /home/app/target_docker
-    ports:
-      - 8080:8001
-    networks:
-      - backend
+  # 클라이언트를 백엔드와 합침
+  # axum-client-dev:
+  #   depends_on:
+  #     - db
+  #   build:
+  #     context: ./axum_project
+  #     dockerfile: Dockerfile.client
+  #   image: axum-client:dev
+  #   container_name: axum-client-dev
+  #   env_file:
+  #     - ./env_files/DB_URL.env
+  #     - ./env_files/DEV.env
+  #   working_dir: /home/app
+  #   # 반응형으로 실행
+  #   # docker compose attach axum-client-dev하면 됨
+  #   stdin_open: true
+  #   tty: true
+  #   # command: cargo watch -w ssr -w shared -x "run --bin ssr"
+  #   # command: cargo watch -w ssr -w shared -s "dx serve --server --package ssr --addr 0.0.0.0 --port 8001"
+  #   command: dx serve --web --hotpatch --package client --addr 0.0.0.0 --port 8001
+  #   volumes:
+  #     - ./axum_project:/home/app
+  #     - /home/app/target_docker
+  #   ports:
+  #     - 8080:8001
+  #   networks:
+  #     - backend
 
 # CMD ["cargo", "run", "--manifest-path", "./migration/Cargo.toml", "--", "up"]
   sea-orm-upper:
