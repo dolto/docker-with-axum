@@ -1,6 +1,8 @@
 use crate::resources::dto::fullstack_extension::AppExtension;
 use crate::resources::dto::user::{ReadUser, UpsertUser, UserDTO};
 use crate::resources::entities::users;
+use crate::utils::jwt::authenticate;
+use axum::middleware;
 use axum::{
     Extension, Json, Router,
     extract::{Query, State},
@@ -246,12 +248,14 @@ pub(super) struct ApiDoc;
 
 // 인증이 필요한 라우터 모음
 // 인증이 필요 없는 라우터모음으로 나눔
-pub(super) fn init_route(aex: AppExtension) -> (Router, Router) {
+pub(super) fn init_route(aex: AppExtension) -> Router {
     let auth_router = OpenApiRouter::new()
         .routes(routes!(find_users))
         .routes(routes!(put_user))
         .routes(routes!(delete_user))
-        .with_state(aex.db.0.clone());
+        .with_state(aex.db.0.clone())
+        // 인증 미들웨어 삽입
+        .layer(middleware::from_fn(authenticate));
 
     // 회원가입은 로그인하지 않아도 할 수 있어야함
     let unauth_router = OpenApiRouter::new()
@@ -270,9 +274,7 @@ pub(super) fn init_route(aex: AppExtension) -> (Router, Router) {
     // 문서 링크는 unauth로 연결하여 인증필요없이 들어갈 수 있도록함
     let unauth_router = unauth_router.merge(Scalar::with_url("/doc/scalar", api));
 
-    // 여전히 인증이 필요한 라우터와 필요없는 라우터는 나눠져있음
-    (
-        Router::new().nest("/user", auth_router),
-        Router::new().nest("/user", unauth_router),
-    )
+    let router = auth_router.merge(unauth_router);
+
+    Router::new().nest("/user", router)
 }

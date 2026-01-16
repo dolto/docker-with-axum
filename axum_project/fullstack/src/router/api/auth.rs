@@ -189,5 +189,5 @@ pub fn init_router(aex: AppExtension) -> Router {
 
     let router = router.merge(Scalar::with_url("/doc/scalar", api));
 
-    router
+    Router::new().nest("/api/auth", router)
 }

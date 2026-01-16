@@ -40,6 +40,6 @@ impl From<(Router, Router)> for ApiRouters {
     }
 }
 
-pub fn init_route(aex: AppExtension) -> ApiRouters {
-    ApiRouters::from(user::init_route(aex)).new_nest("/api")
+pub fn init_route(aex: AppExtension) -> Router {
+    Router::new().nest("/api", user::init_route(aex))
 }

@@ -1,10 +1,12 @@
 mod chat;
 pub mod state;
 use axum::{
+    Router,
     extract::{
         WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
+    middleware,
     response::IntoResponse,
 };
 use futures_util::{SinkExt, StreamExt};
@@ -14,8 +16,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::{
-    resources::dto::fullstack_extension::AppExtension,
-    router::api::{ApiRouters, auth::SecurityAddon},
+    resources::dto::fullstack_extension::AppExtension, router::api::auth::SecurityAddon,
+    utils::jwt::authenticate,
 };
 
 pub const TAG: &str = "WebSocket";
@@ -28,11 +30,12 @@ pub const TAG: &str = "WebSocket";
     tags((name = TAG, description = "WebSocket Api Tag"))
 )]
 struct ApiDoc;
-pub fn init_router(aex: AppExtension) -> ApiRouters {
+pub fn init_router(aex: AppExtension) -> Router {
     let auth_router = OpenApiRouter::new()
         .routes(routes!(websocket_handler))
         .routes(routes!(chat::chat_ws_handler))
-        .with_state(aex.ws.clone());
+        .with_state(aex.ws.clone())
+        .layer(middleware::from_fn(authenticate));
 
     let unauth_router = OpenApiRouter::new().with_state(aex.ws);
 
@@ -45,11 +48,9 @@ pub fn init_router(aex: AppExtension) -> ApiRouters {
 
     let unauth_router = unauth_router.merge(Scalar::with_url("/doc/scalar", api));
 
-    ApiRouters {
-        auth: auth_router,
-        unauth: unauth_router,
-    }
-    .new_nest("/ws")
+    let router = Router::new().nest("/ws", auth_router.merge(unauth_router));
+
+    router
 }
 
 // curl -i -N \

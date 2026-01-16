@@ -41,5 +41,6 @@ pub(super) fn set_router(base_router: OpenApiRouter) -> Router {
         .split_for_parts();
 
     let router = router.merge(Scalar::with_url("/scalar", api));
-    router
+
+    Router::new().nest("/hello", router)
 }

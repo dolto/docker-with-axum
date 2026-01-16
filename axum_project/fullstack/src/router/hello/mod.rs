@@ -3,7 +3,10 @@ mod open_api;
 pub mod state;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::resources::dto::{fullstack_extension::AppExtension, user::UserDTO};
+use crate::{
+    resources::dto::{fullstack_extension::AppExtension, user::UserDTO},
+    utils::jwt::authenticate,
+};
 use axum::{
     Extension, Form, Json, Router,
     body::Bytes,
@@ -13,6 +16,7 @@ use axum::{
         HeaderMap, HeaderValue, StatusCode,
         header::{CONTENT_TYPE, USER_AGENT},
     },
+    middleware,
 };
 use axum_extra::{
     TypedHeader,
@@ -940,7 +944,8 @@ pub fn hello_router(aex: AppExtension) -> Router {
         .routes(routes!(hello_user_insert))
         .routes(routes!(hello_user_insert_many))
         .routes(routes!(hello_user_update))
-        .routes(routes!(hello_user_delete));
+        .routes(routes!(hello_user_delete))
+        .layer(middleware::from_fn(authenticate));
 
     let hello_router = OpenApiRouter::new()
         .routes(routes!(param_query_with_hashmap))

@@ -9,7 +9,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode}
 use lazy_static::lazy_static;
 use reqwest::header::AUTHORIZATION;
 use sea_orm::{DatabaseConnection, EntityTrait, sea_query::OnConflict};
-use std::{env, str::FromStr};
+use std::env;
 use tracing::debug;
 
 use crate::resources::{

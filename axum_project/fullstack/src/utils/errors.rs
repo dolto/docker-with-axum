@@ -5,7 +5,7 @@ use bcrypt::BcryptError;
 use dioxus::{CapturedError, fullstack::AsStatusCode, server::ServerFnError};
 use reqwest::{
     StatusCode,
-    header::{LOCATION, SET_COOKIE, ToStrError},
+    header::{InvalidHeaderValue, LOCATION, SET_COOKIE, ToStrError},
 };
 use sea_orm::DbErr;
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ pub struct AppError {
 
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "[Err {}]: {}", self.code, self.message)
+        write!(f, "[Err {}]: {}", self.code, self.message)
     }
 }
 impl std::error::Error for AppError {}
@@ -46,7 +46,7 @@ impl AppError {
     pub fn auth_error() -> Self {
         Self::new(
             StatusCode::UNAUTHORIZED,
-            "error validating token",
+            "need login or reloading",
             Some("/".to_string()),
         )
     }
@@ -162,11 +162,18 @@ impl From<AppError> for ServerFnError {
         ServerFnError::new(value)
     }
 }
+
+impl From<InvalidHeaderValue> for AppError {
+    fn from(value: InvalidHeaderValue) -> Self {
+        error!("InvalidHeaderValue {:?}", value);
+        AppError::auth_error()
+    }
+}
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         let mut response = axum::response::Response::new(axum::body::Body::empty());
 
-        if let Some(path) = self.redirect {
+        if let Some(path) = &self.redirect {
             *response.status_mut() = StatusCode::SEE_OTHER;
             if let Ok(head) = HeaderValue::from_str(&path) {
                 let headers = response.headers_mut();
@@ -176,7 +183,10 @@ impl IntoResponse for AppError {
             *response.status_mut() = code;
         }
 
-        let err_msg_val = format!("err_msg={}; Path=/; HttpOnly", self.message);
+        let rand = rand::random::<u64>();
+        let err_msg_val = format!("err_msg{}={}; Path=/; HttpOnly", rand, &self);
+
+        println!("{}", err_msg_val);
 
         if let Ok(head) = HeaderValue::from_str(&err_msg_val) {
             let headers = response.headers_mut();

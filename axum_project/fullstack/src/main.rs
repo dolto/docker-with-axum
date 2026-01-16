@@ -16,9 +16,7 @@ use crate::front::app;
 fn main() {
     #[cfg(feature = "server")]
     dioxus::serve(|| async move {
-        use axum::Extension;
-        use axum::{Router, routing::get};
-        use middle::{init_middel_ware, time_out_test};
+        use axum::Router;
         use router::api::{self, auth};
         use router::hello::*;
 
@@ -40,20 +38,15 @@ fn main() {
         let ws_routers = ws::init_router(fulex.clone());
         let hello_router = hello_router(fulex.clone());
         let login_router = auth::init_router(fulex.clone());
+        let front_router = front::init_router(fulex.clone());
 
-        let no_auth_router = Router::new()
-            .nest("/hello", hello_router)
-            .nest("/api/auth", login_router)
-            .merge(api_routers.unauth)
-            .merge(ws_routers.unauth)
-            .merge(dioxus::server::router(app))
-            .route("/middle/test", get(time_out_test));
-
-        let auth_router = Router::new().merge(api_routers.auth).merge(ws_routers.auth);
-
-        let app = Router::new().merge(auth_router);
-
-        let app = init_middel_ware(no_auth_router, app).layer(Extension(fulex));
+        let app = Router::new()
+            .merge(api_routers)
+            .merge(ws_routers)
+            .merge(hello_router)
+            .merge(login_router)
+            .merge(front_router)
+            .merge(dioxus::server::router(app));
 
         Ok(app)
         // let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();

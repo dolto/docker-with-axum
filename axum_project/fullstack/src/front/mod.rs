@@ -2,8 +2,10 @@ pub mod page;
 pub mod util;
 
 use crate::front::page::home::Home;
+use crate::front::util::ErrorLayout;
+#[cfg(feature = "server")]
+use crate::resources::dto::fullstack_extension::AppExtension;
 use crate::resources::style::TACIT;
-use dioxus::fullstack::FullstackContext;
 use dioxus::prelude::*;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -22,19 +24,14 @@ pub fn app() -> Element {
     }
 }
 
-// And then our Outlet is wrapped in a fallback UI
-#[component]
-fn ErrorLayout() -> Element {
-    rsx! {
-        ErrorBoundary {
-            handle_error: move |err: ErrorContext| {
-                let http_error = FullstackContext::commit_error_status(err.error().unwrap());
-                match http_error.status {
-                    StatusCode::NOT_FOUND => rsx! { div { "404 - Page not found" } },
-                    _ => rsx! { div { "An unknown error occurred" } },
-                }
-            },
-            Outlet::<Route> {}
-        }
-    }
+#[cfg(feature = "server")]
+pub fn init_router(aex: AppExtension) -> axum::Router {
+    use crate::front::page::component::login;
+
+    let login_router = login::init_router(aex.clone());
+    let util_router = util::init_router();
+
+    axum::Router::new()
+        .nest("/front", login_router)
+        .nest("/front", util_router)
 }

@@ -12,9 +12,11 @@ use crate::front::util::add_no_cache_headers;
 
 #[cfg(feature = "server")]
 use crate::resources::dto::fullstack_extension::AppDatabase;
+#[cfg(feature = "server")]
+use crate::resources::dto::fullstack_extension::AppExtension;
 use crate::resources::dto::user::ReqUser;
-
-use tracing::debug;
+#[cfg(feature = "server")]
+use crate::utils::errors::AppError;
 
 #[component]
 pub fn Login() -> Element {
@@ -31,7 +33,7 @@ pub fn Login() -> Element {
             p{"Wellcome {username.as_ref().unwrap()}"}
             form{
                 method: "post",
-                action: "/front/logout/action",
+                action: "/front/logout_action",
                 button {"Logout"}
             }
         }
@@ -39,7 +41,7 @@ pub fn Login() -> Element {
         rsx! {
             form{
                 method: "post",
-                action: "/front/login/action",
+                action: "/front/login_action",
                 label { "Id: "
                     input {
                         name: "username",
@@ -94,12 +96,16 @@ async fn get_user_info_from_cookie() -> Result<LoginInfo> {
     })
 }
 
-#[post("/front/login/action", state: State<AppDatabase>)]
-async fn login_action(Form(req_user): Form<ReqUser>) -> Result<Response<Body>> {
+#[cfg(feature = "server")]
+// #[axum::debug_handler]
+async fn login_action(
+    State(state): State<AppDatabase>,
+    Form(req_user): axum::Form<ReqUser>,
+) -> Result<Response<Body>, AppError> {
     use crate::router::api::auth::*;
 
     println!("token check start 1");
-    let token = login(State(state.0.0), axum::Json(req_user.clone())).await?;
+    let token = login(State(state.0), axum::Json(req_user.clone())).await?;
     println!("token check end");
 
     let mut response = Response::new(Body::empty());
@@ -127,8 +133,12 @@ async fn login_action(Form(req_user): Form<ReqUser>) -> Result<Response<Body>> {
     Ok(response)
 }
 
-#[post("/front/logout/action", header: TypedHeader<Cookie>)]
-async fn logout_action(Form(()): Form<()>) -> Result<Response<Body>> {
+// #[post("/front/logout/action", header: TypedHeader<Cookie>)]
+#[cfg(feature = "server")]
+// #[axum::debug_handler]
+async fn logout_action(
+    header: axum_extra::TypedHeader<axum_extra::headers::Cookie>,
+) -> Result<Response<Body>, AppError> {
     let save_id = header.0.get("save_id").map(|m| m.parse::<bool>());
 
     let save_id = if let Some(Ok(save_id)) = save_id {
@@ -155,4 +165,13 @@ async fn logout_action(Form(()): Form<()>) -> Result<Response<Body>> {
     add_no_cache_headers(res_header);
 
     Ok(response)
+}
+
+#[cfg(feature = "server")]
+pub fn init_router(aex: AppExtension) -> axum::Router {
+    // nest front 할 예정
+    axum::Router::new()
+        .route("/login_action", axum::routing::post(login_action))
+        .route("/logout_action", axum::routing::post(logout_action))
+        .with_state(aex.db.clone())
 }
