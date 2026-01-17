@@ -1,9 +1,17 @@
 FROM rust:1.92.0
 
 RUN apt-get update && apt-get install -y build-essential \
-pkg-config curl lld && \
+pkg-config curl lld clang && \
 rm -rf /var/lib/apt/lists/*
 
+RUN cargo install wild-linker
 # RUN cargo install cargo-watch
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo install dioxus-cli --version 0.7.2
+RUN cargo install dioxus-cli --version 0.7.3
+
+RUN mkdir -p $CARGO_HOME && \
+echo "[target.'cfg(target_os = \"linux\")']" >> $CARGO_HOME/config.toml && \
+echo "linker = \"clang\"" >> $CARGO_HOME/config.toml && \
+echo "rustflags = [\"-Clink-arg=--ld-path=wild\"]" >> $CARGO_HOME/config.toml
+
+WORKDIR /app

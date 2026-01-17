@@ -172,21 +172,27 @@ impl From<InvalidHeaderValue> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         let mut response = axum::response::Response::new(axum::body::Body::empty());
+        *response.status_mut() = StatusCode::SEE_OTHER;
 
         if let Some(path) = &self.redirect {
-            *response.status_mut() = StatusCode::SEE_OTHER;
             if let Ok(head) = HeaderValue::from_str(&path) {
                 let headers = response.headers_mut();
                 headers.insert(LOCATION, head);
+            } else {
+                let headers = response.headers_mut();
+                headers.insert(LOCATION, HeaderValue::from_static("/"));
             }
-        } else if let Ok(code) = StatusCode::from_u16(self.code) {
-            *response.status_mut() = code;
+        } else {
+            let headers = response.headers_mut();
+            headers.insert(LOCATION, HeaderValue::from_static("/"));
         }
 
         let rand = rand::random::<u64>();
-        let err_msg_val = format!("err_msg{}={}; Path=/; HttpOnly", rand, &self);
-
-        println!("{}", err_msg_val);
+        let err_msg_val = format!(
+            "err_msg{}={}; Path=/; HttpOnly",
+            rand,
+            &urlencoding::encode(&self.to_string())
+        );
 
         if let Ok(head) = HeaderValue::from_str(&err_msg_val) {
             let headers = response.headers_mut();

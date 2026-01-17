@@ -21,4 +21,4 @@ script = []
 script = []
 
 [web.watcher]
-reload_html = true
+# reload_html = true

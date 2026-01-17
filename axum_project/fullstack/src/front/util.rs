@@ -30,7 +30,8 @@ pub async fn get_error_msg() -> Result<Vec<String>> {
     let mut vec = Vec::with_capacity(10);
     for (key, value) in header.iter() {
         if key.starts_with("err_msg") {
-            vec.push(value.to_owned());
+            let msg = urlencoding::decode(value)?.to_string();
+            vec.push(msg);
         }
     }
 
@@ -41,7 +42,6 @@ pub async fn get_error_msg() -> Result<Vec<String>> {
 #[component]
 pub fn ErrorLayout() -> Element {
     let err_msg = use_loader(|| get_error_msg())?();
-    let rspan = err_msg.len() + 1;
     let route = use_route::<Route>();
 
     if !err_msg.is_empty() {
