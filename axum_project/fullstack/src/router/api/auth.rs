@@ -3,13 +3,12 @@ use crate::resources::dto::fullstack_extension::AppExtension;
 use crate::resources::dto::user::{CurrentUser, Tokens, UserCondition, UserDto};
 use axum::body::Body;
 use axum::extract::{FromRef, Query, State};
-use axum::http::{HeaderName, HeaderValue, Response};
+use axum::http::{HeaderValue, Response};
 use axum::{Extension, Form, Json, Router, debug_handler};
 use axum_extra::TypedHeader;
 use reqwest::StatusCode;
-use reqwest::header::{CONTENT_TYPE, LOCATION, SET_COOKIE};
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, ModelTrait, QueryFilter};
-use tower_http::ServiceExt;
+use reqwest::header::{LOCATION, SET_COOKIE};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
 use utoipa::openapi::security::{HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
@@ -18,8 +17,7 @@ use utoipa_scalar::{Scalar, Servable};
 
 use crate::utils::errors::AppError;
 
-use crate::resources::entities::{refresh_token, users};
-use crate::utils::hash::verify_password;
+use crate::resources::entities::refresh_token;
 use crate::utils::jwt::{create_token, validate_jwt_token_without_exp, validate_refresh_token};
 
 pub struct SecurityAddon;

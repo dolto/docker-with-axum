@@ -1,26 +1,19 @@
 use crate::resources::dto::fullstack_extension::AppExtension;
 use crate::resources::dto::user::{CurrentUser, UserDto};
-use crate::resources::entities::users;
 use crate::utils::jwt::authenticate;
-use axum::middleware;
 use axum::{
     Extension, Json, Router,
     extract::{Query, State},
 };
+use axum::{Form, middleware};
 use reqwest::StatusCode;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
-    TryIntoModel,
-};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_scalar::{Scalar, Servable};
 
-use crate::{
-    router::api::auth::SecurityAddon,
-    utils::{errors::AppError, hash::hash_password},
-};
+use crate::{router::api::auth::SecurityAddon, utils::errors::AppError};
 
 const TAG: &str = "USER";
 
@@ -29,10 +22,43 @@ const TAG: &str = "USER";
 pub struct UserGetReq {
     id: Option<i32>,
     username: Option<String>,
+    limit: u64,
+    page: u64,
 }
 impl UserGetReq {
+    #[cfg(feature = "server")]
     pub async fn get_users(&self, conn: &DatabaseConnection) -> Result<Vec<UserDto>, AppError> {
-        Err(AppError::any_t_error("아직 구현되지 않은 함수"))
+        use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter};
+
+        use crate::resources::entities::users;
+
+        if let Some(id) = self.id {
+            return Ok(users::Entity::find_by_id(id)
+                .all(conn)
+                .await?
+                .into_iter()
+                .map(|v| v.into())
+                .collect());
+        } else if let Some(username) = &self.username {
+            use sea_orm::{ColumnTrait, PaginatorTrait};
+
+            return Ok(users::Entity::find()
+                .filter(users::Column::Username.like(format!("%{}%", username)))
+                .paginate(conn, self.limit)
+                .fetch_page(self.page)
+                .await?
+                .into_iter()
+                .map(|v| v.into())
+                .collect());
+        }
+
+        Ok(users::Entity::find()
+            .paginate(conn, self.limit)
+            .fetch_page(self.page)
+            .await?
+            .into_iter()
+            .map(|v| v.into())
+            .collect())
     }
 }
 #[utoipa::path(
@@ -80,7 +106,7 @@ async fn find_users(
 async fn put_user(
     State(conn): State<DatabaseConnection>,
     Extension(id): Extension<CurrentUser>,
-    Json(mut user): Json<UserDto>,
+    Form(user): Form<UserDto>,
 ) -> Result<Json<UserDto>, AppError> {
     // 본인만 변경 가능함
     Ok(if &id == &user.id {
@@ -95,9 +121,20 @@ async fn put_user(
 pub struct UserDeleteReq {
     pub id: i32,
 }
+#[cfg(feature = "server")]
 impl UserDeleteReq {
     pub async fn delete_user(&self, conn: &DatabaseConnection) -> Result<StatusCode, AppError> {
-        Err(AppError::any_t_error("아직 구현되지 않은 함수"))
+        use sea_orm::EntityTrait;
+
+        use crate::resources::entities::users;
+
+        let res = users::Entity::delete_by_id(self.id).exec(conn).await?;
+
+        if res.rows_affected == 0 {
+            Ok(StatusCode::NOT_FOUND)
+        } else {
+            Ok(StatusCode::OK)
+        }
     }
 }
 

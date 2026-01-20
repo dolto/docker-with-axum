@@ -24,43 +24,87 @@
 .
 ├── Readme.md
 ├── axum_project
-│   ├── Dockerfile
-│   └── axum-project
-│       ├── Cargo.lock
-│       ├── Cargo.toml
-│       └── src
-│           ├── database.rs
-│           ├── entities
-│           │   ├── category.rs
-│           │   ├── mod.rs
-│           │   ├── prelude.rs
-│           │   ├── product.rs
-│           │   ├── refresh_token.rs
-│           │   └── users.rs
-│           ├── lib.rs
-│           ├── main.rs
-│           ├── middle.rs
-│           ├── open_api.rs
-│           ├── router
-│           │   ├── api
-│           │   │   ├── auth.rs
-│           │   │   ├── mod.rs
-│           │   │   └── user.rs
-│           │   ├── hello
-│           │   │   ├── database.rs
-│           │   │   ├── mod.rs
-│           │   │   ├── open_api.rs
-│           │   │   └── state.rs
-│           │   └── mod.rs
-│           ├── utils
-│           │   ├── errors.rs
-│           │   ├── hash.rs
-│           │   ├── jwt.rs
-│           │   └── mod.rs
-│           └── ws
-│               ├── chat.rs
-│               ├── mod.rs
-│               └── state.rs
+│   ├── Cargo.lock
+│   ├── Cargo.toml
+│   ├── Dockerfile.client
+│   ├── Dockerfile.fullstack
+│   ├── backend
+│   ├── client
+│   │   ├── AGENTS.md
+│   │   ├── Cargo.toml
+│   │   ├── Dioxus.toml
+│   │   ├── README.md
+│   │   └── src
+│   │       ├── component
+│   │       │   ├── login.rs
+│   │       │   └── mod.rs
+│   │       ├── main.rs
+│   │       └── util.rs
+│   ├── fullstack
+│   │   ├── Cargo.lock
+│   │   ├── Cargo.toml
+│   │   ├── Dioxus.toml
+│   │   ├── res
+│   │   │   └── tacit-css-1.9.5.min.css
+│   │   ├── src
+│   │   │   ├── database.rs
+│   │   │   ├── front
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── page
+│   │   │   │   │   ├── component
+│   │   │   │   │   │   ├── error_layout.rs
+│   │   │   │   │   │   ├── login.rs
+│   │   │   │   │   │   └── mod.rs
+│   │   │   │   │   ├── home.rs
+│   │   │   │   │   └── mod.rs
+│   │   │   │   └── util.rs
+│   │   │   ├── main.rs
+│   │   │   ├── middle.rs
+│   │   │   ├── open_api.rs
+│   │   │   ├── resources
+│   │   │   │   ├── dto
+│   │   │   │   │   ├── fullstack_extension.rs
+│   │   │   │   │   ├── mod.rs
+│   │   │   │   │   └── user.rs
+│   │   │   │   ├── entities
+│   │   │   │   │   ├── category.rs
+│   │   │   │   │   ├── mod.rs
+│   │   │   │   │   ├── prelude.rs
+│   │   │   │   │   ├── product.rs
+│   │   │   │   │   ├── refresh_token.rs
+│   │   │   │   │   └── users.rs
+│   │   │   │   ├── mod.rs
+│   │   │   │   └── style
+│   │   │   │       └── mod.rs
+│   │   │   ├── router
+│   │   │   │   ├── api
+│   │   │   │   │   ├── auth.rs
+│   │   │   │   │   ├── mod.rs
+│   │   │   │   │   └── user.rs
+│   │   │   │   ├── hello
+│   │   │   │   │   ├── database.rs
+│   │   │   │   │   ├── mod.rs
+│   │   │   │   │   ├── open_api.rs
+│   │   │   │   │   └── state.rs
+│   │   │   │   └── mod.rs
+│   │   │   ├── utils
+│   │   │   │   ├── errors.rs
+│   │   │   │   ├── hash.rs
+│   │   │   │   ├── jwt.rs
+│   │   │   │   └── mod.rs
+│   │   │   └── ws
+│   │   │       ├── chat.rs
+│   │   │       ├── mod.rs
+│   │   │       └── state.rs
+│   │   └── state-fullstack-context-macro
+│   │       ├── Cargo.toml
+│   │       └── src
+│   │           └── lib.rs
+│   ├── shared
+│   │   ├── Cargo.toml
+│   │   └── res
+│   │       └── tacit-css-1.9.5.min.css
+│   └── target_docker
 ├── db
 │   ├── Dockerfile
 │   └── migration
@@ -71,6 +115,7 @@
 │           ├── lib.rs
 │           ├── m20251228_110826_create_table.rs
 │           ├── m20260109_003305_update.rs
+│           ├── m20260119_020622_update.rs
 │           └── main.rs
 ├── docker-compose.yaml
 └── env_files
@@ -99,6 +144,10 @@ POSTGRES_PASSWORD=dolto
 ```DEV.env
 RUST_LOG=debug
 SECRET_KEY=1234
+CARGO_TARGET_DIR=/home/app/target_docker
+GOOGLE_CLIENT_ID=구글 클라이언트 아이디
+GOOGLE_CLIENT_SECRET_KEY=구글 클라이언트 비밀키
+LOGIN_REDIRECT=구글 클라이언트 리디렉션 주소
 ```
 3. docker compose 환경변수 설정 (.env)
 - 터미널에서 현재 유저의 uid와 gid를 구한다 (유저 아이디, 그룹 아이디)
