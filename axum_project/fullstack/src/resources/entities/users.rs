@@ -9,7 +9,14 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub username: String,
-    pub password: String,
+    #[sea_orm(unique)]
+    pub google_oauth: Option<String>,
+    #[sea_orm(unique)]
+    pub naver_oauth: Option<String>,
+    #[sea_orm(unique)]
+    pub kakao_oauth: Option<String>,
+    #[sea_orm(unique)]
+    pub git_hub_oauth: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

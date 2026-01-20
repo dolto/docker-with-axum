@@ -1,17 +1,24 @@
 FROM rust:1.92.0
 
 RUN apt-get update && apt-get install -y build-essential \
-pkg-config curl lld clang && \
+pkg-config curl lld clang tmux && \
 rm -rf /var/lib/apt/lists/*
 
-RUN cargo install wild-linker
 # RUN cargo install cargo-watch
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install dioxus-cli --version 0.7.3
 
-RUN mkdir -p $CARGO_HOME && \
-echo "[target.'cfg(target_os = \"linux\")']" >> $CARGO_HOME/config.toml && \
-echo "linker = \"clang\"" >> $CARGO_HOME/config.toml && \
-echo "rustflags = [\"-Clink-arg=--ld-path=wild\"]" >> $CARGO_HOME/config.toml
+# 1. 마우스 스크롤 활성화
+RUN echo "set -g mouse on" >> /root/.tmux.conf
+
+# 2. 터미널 색상 제대로 나오게 설정 (이게 없으면 흑백이나 이상하게 보일 수 있음)
+ENV TERM=xterm-256color
+
+# 더 빠른 rust로 만들어진 링커인데, 증분 링킹이 되지 않아서 핫 패칭이 제대로 동작하지 않음(정확히는 가비지 컬랙터가 핫 패칭이 재활용할 .o파일을 제거해버림)
+# RUN cargo install wild-linker
+# RUN mkdir -p $CARGO_HOME && \
+# echo "[target.'cfg(target_os = \"linux\")']" >> $CARGO_HOME/config.toml && \
+# echo "linker = \"clang\"" >> $CARGO_HOME/config.toml && \
+# echo "rustflags = [\"-Clink-arg=--ld-path=wild\"]" >> $CARGO_HOME/config.toml
 
 WORKDIR /app

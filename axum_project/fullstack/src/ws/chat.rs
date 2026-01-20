@@ -8,7 +8,7 @@ use axum::{
 };
 use futures_util::{SinkExt, StreamExt};
 
-use crate::{utils::jwt::CurrentUser, ws::state::ChatChannel};
+use crate::{resources::dto::user::CurrentUser, ws::state::ChatChannel};
 
 #[utoipa::path(
     get,

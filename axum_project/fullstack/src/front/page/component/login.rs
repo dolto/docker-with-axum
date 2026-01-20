@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 
 #[cfg(feature = "server")]
 use dioxus::fullstack::{Cookie, TypedHeader};
+use rand::random;
 #[cfg(feature = "server")]
 use reqwest::header::{LOCATION, SET_COOKIE};
 use serde::{Deserialize, Serialize};
@@ -11,12 +12,38 @@ use crate::front::Route;
 use crate::front::util::add_no_cache_headers;
 
 #[cfg(feature = "server")]
-use crate::resources::dto::fullstack_extension::AppDatabase;
-#[cfg(feature = "server")]
 use crate::resources::dto::fullstack_extension::AppExtension;
-use crate::resources::dto::user::ReqUser;
 #[cfg(feature = "server")]
 use crate::utils::errors::AppError;
+
+#[cfg_attr(feature = "server", derive(utoipa::ToSchema))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct OauthUrl {
+    pub title: String,
+    pub url: String,
+    pub redirect_uri: String,
+    pub response_type: String,
+    // pub scope: String,
+    pub state: String,
+}
+
+#[component]
+pub fn OauthBtn(oauthurl: OauthUrl) -> Element {
+    rsx! {
+        form{
+            method: "post",
+            action: "/api/auth/state_setting",
+            input { r#type: "hidden", name: "title", value: "{oauthurl.title}"}
+            input { r#type: "hidden", name: "url", value: "{oauthurl.url}"}
+            input { r#type: "hidden", name: "redirect_uri", value: "{oauthurl.redirect_uri}"}
+            input { r#type: "hidden", name: "response_type", value: "{oauthurl.response_type}"}
+            // input { r#type: "hidden", name: "scope", value: "{oauthurl.scope}"}
+            input { r#type: "hidden", name: "state", value: "{oauthurl.state}"}
+
+            button { "{oauthurl.title}" }
+        }
+    }
+}
 
 #[component]
 pub fn Login() -> Element {
@@ -38,41 +65,52 @@ pub fn Login() -> Element {
             }
         }
     } else {
+        let state = random::<u64>();
+        let google_oauth = OauthUrl {
+            title: "Google Login".to_string(),
+            url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
+            redirect_uri: env!("LOGIN_REDIRECT").to_string(),
+            response_type: "code".to_owned(),
+            state: state.to_string(),
+        };
         rsx! {
-            form{
-                method: "post",
-                action: "/front/login_action",
-                label { "Id: "
-                    input {
-                        name: "username",
-                        placeholder: "Id",
-                        value: if let Some(username) = username {"{username}"} else {""}
-                    }
-                }
-                br {  }
-                label { "Pw: "
-                    input {
-                        name: "password",
-                        placeholder: "Pw",
-                        r#type: "password"
-                    }
-                }
-                br {  }
-                label { "save id"
-                    input {
-                        name: "save_id",
-                        r#type: "checkbox",
-                        value: true,
-                        checked: "{save_id}"
-                    }
-                }
-                button { "login" }
-                input {
-                    name: "refere",
-                    r#type: "hidden",
-                    value: "{path}"
-                }
+            OauthBtn {
+                oauthurl: google_oauth
             }
+            // form{
+            //     method: "post",
+            //     action: "/front/login_action",
+            //     label { "Id: "
+            //         input {
+            //             name: "username",
+            //             placeholder: "Id",
+            //             value: if let Some(username) = username {"{username}"} else {""}
+            //         }
+            //     }
+            //     br {  }
+            //     label { "Pw: "
+            //         input {
+            //             name: "password",
+            //             placeholder: "Pw",
+            //             r#type: "password"
+            //         }
+            //     }
+            //     br {  }
+            //     label { "save id"
+            //         input {
+            //             name: "save_id",
+            //             r#type: "checkbox",
+            //             value: true,
+            //             checked: "{save_id}"
+            //         }
+            //     }
+            //     button { "login" }
+            //     input {
+            //         name: "refere",
+            //         r#type: "hidden",
+            //         value: "{path}"
+            //     }
+            // }
         }
     }
 }
@@ -96,42 +134,42 @@ async fn get_user_info_from_cookie() -> Result<LoginInfo> {
     })
 }
 
-#[cfg(feature = "server")]
-// #[axum::debug_handler]
-async fn login_action(
-    State(state): State<AppDatabase>,
-    Form(req_user): axum::Form<ReqUser>,
-) -> Result<Response<Body>, AppError> {
-    use crate::router::api::auth::*;
+// #[cfg(feature = "server")]
+// // #[axum::debug_handler]
+// async fn login_action(
+//     State(state): State<AppDatabase>,
+//     Form(req_user): axum::Form<ReqUser>,
+// ) -> Result<Response<Body>, AppError> {
+//     use crate::router::api::auth::*;
 
-    println!("token check start 1");
-    let token = login(State(state.0), axum::Json(req_user.clone())).await?;
-    println!("token check end");
+//     println!("token check start 1");
+//     let token = login(State(state.0), axum::Json(req_user.clone())).await?;
+//     println!("token check end");
 
-    let mut response = Response::new(Body::empty());
-    *response.status_mut() = StatusCode::SEE_OTHER;
+//     let mut response = Response::new(Body::empty());
+//     *response.status_mut() = StatusCode::SEE_OTHER;
 
-    let header = response.headers_mut();
+//     let header = response.headers_mut();
 
-    let jwt_val = format!("jwt={}; Path=/; HttpOnly", token.0.jwt);
-    let refresh_val = format!("refresh={}; Path=/; HttpOnly;", token.0.refresh);
-    let username_val = format!("username={}; Path=/; HttpOnly", req_user.username);
-    let save_id_val = format!(
-        "save_id={}; Path=/; HttpOnly",
-        req_user.save_id.unwrap_or(false)
-    );
+//     let jwt_val = format!("jwt={}; Path=/; HttpOnly", token.0.jwt);
+//     let refresh_val = format!("refresh={}; Path=/; HttpOnly;", token.0.refresh);
+//     let username_val = format!("username={}; Path=/; HttpOnly", req_user.username);
+//     let save_id_val = format!(
+//         "save_id={}; Path=/; HttpOnly",
+//         req_user.save_id.unwrap_or(false)
+//     );
 
-    add_no_cache_headers(header);
+//     add_no_cache_headers(header);
 
-    header.insert(LOCATION, HeaderValue::from_str(&req_user.refere)?);
+//     header.insert(LOCATION, HeaderValue::from_str(&req_user.refere)?);
 
-    header.append(SET_COOKIE, HeaderValue::from_str(&jwt_val)?);
-    header.append(SET_COOKIE, HeaderValue::from_str(&refresh_val)?);
-    header.append(SET_COOKIE, HeaderValue::from_str(&username_val)?);
-    header.append(SET_COOKIE, HeaderValue::from_str(&save_id_val)?);
+//     header.append(SET_COOKIE, HeaderValue::from_str(&jwt_val)?);
+//     header.append(SET_COOKIE, HeaderValue::from_str(&refresh_val)?);
+//     header.append(SET_COOKIE, HeaderValue::from_str(&username_val)?);
+//     header.append(SET_COOKIE, HeaderValue::from_str(&save_id_val)?);
 
-    Ok(response)
-}
+//     Ok(response)
+// }
 
 // #[post("/front/logout/action", header: TypedHeader<Cookie>)]
 #[cfg(feature = "server")]
@@ -171,7 +209,7 @@ async fn logout_action(
 pub fn init_router(aex: AppExtension) -> axum::Router {
     // nest front 할 예정
     axum::Router::new()
-        .route("/login_action", axum::routing::post(login_action))
+        // .route("/login_action", axum::routing::post(login_action))
         .route("/logout_action", axum::routing::post(logout_action))
         .with_state(aex.db.clone())
 }

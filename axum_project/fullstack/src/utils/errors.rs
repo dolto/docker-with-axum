@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Display};
+use std::{
+    env::VarError,
+    fmt::{Debug, Display},
+};
 
 use axum::{http::HeaderValue, response::IntoResponse};
 use bcrypt::BcryptError;
@@ -68,6 +71,16 @@ impl AppError {
     }
 }
 
+impl From<VarError> for AppError {
+    fn from(value: VarError) -> Self {
+        error!("Env is not found {:?}", value);
+        Self::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Can't Found Env Info",
+            None,
+        )
+    }
+}
 impl From<DbErr> for AppError {
     fn from(e: DbErr) -> Self {
         error!("Data base Error {:?}", e);

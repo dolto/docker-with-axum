@@ -1,9 +1,15 @@
+use crate::front::page::component::login::OauthUrl;
 use crate::resources::dto::fullstack_extension::AppExtension;
-use crate::resources::dto::user::{ReqUser, Tokens};
-use axum::extract::State;
-use axum::{Json, Router, debug_handler};
+use crate::resources::dto::user::{CurrentUser, Tokens, UserCondition, UserDto};
+use axum::body::Body;
+use axum::extract::{FromRef, Query, State};
+use axum::http::{HeaderName, HeaderValue, Response};
+use axum::{Extension, Form, Json, Router, debug_handler};
+use axum_extra::TypedHeader;
 use reqwest::StatusCode;
+use reqwest::header::{CONTENT_TYPE, LOCATION, SET_COOKIE};
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, ModelTrait, QueryFilter};
+use tower_http::ServiceExt;
 use utoipa::openapi::security::{HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
@@ -34,47 +40,213 @@ impl Modify for SecurityAddon {
 }
 
 #[utoipa::path(
-    path = "/login",
+    path = "/state_setting",
     post,
     tag = TAG,
     request_body(
-        content = ReqUser,
+        content_type = mime::FORM_DATA.as_ref(),
+        content = OauthUrl
+    ),
+    responses(
+        (status = StatusCode::SEE_OTHER)
+    )
+)]
+pub async fn state_setting(Form(oauth): Form<OauthUrl>) -> Result<Response<Body>, AppError> {
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::SEE_OTHER;
+
+    let url = format!(
+        "{}?client_id={}&response_type={}&state={}&scope=email%20profile%20openid&redirect_uri={}",
+        oauth.url,
+        urlencoding::encode(&std::env::var("CLIENT_ID")?),
+        urlencoding::encode(&oauth.response_type),
+        urlencoding::encode(&oauth.state),
+        urlencoding::encode(&oauth.redirect_uri)
+    );
+
+    let headers = response.headers_mut();
+    let state_val = format!(
+        "state={}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1000",
+        oauth.state
+    );
+    headers.append(SET_COOKIE, HeaderValue::from_str(&state_val)?);
+    headers.insert(LOCATION, HeaderValue::from_str(&url)?);
+
+    Ok(response)
+}
+
+#[cfg_attr(feature = "server", derive(utoipa::IntoParams))]
+#[derive(serde::Deserialize, Debug)]
+pub struct GoogleTokenReq {
+    pub state: String,
+    pub code: String,
+    pub scope: String,
+    pub authuser: String,
+    pub prompt: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct GoogleTokenRes {
+    pub access_token: String,
+    pub expires_in: i32,
+    pub scope: String,
+    pub token_type: String,
+    pub id_token: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct GoogleClaims {
+    pub sub: String,
+    pub email: String,
+}
+
+async fn get_google_claims(
+    reqwest: reqwest::Client,
+    req: GoogleTokenReq,
+    cookies: axum_extra::headers::Cookie,
+) -> Result<GoogleClaims, AppError> {
+    let cookie_state = cookies.get("state").ok_or(AppError::any_error())?;
+
+    if cookie_state != req.state {
+        return Err(AppError::any_error());
+    }
+
+    let params = [
+        ("code", req.code),
+        ("client_id", std::env::var("CLIENT_ID")?),
+        ("client_secret", std::env::var("CLIENT_SECRET_KEY")?),
+        ("redirect_uri", std::env::var("LOGIN_REDIRECT")?),
+        ("grant_type", "authorization_code".to_string()),
+    ];
+    let res = reqwest
+        .post("https://oauth2.googleapis.com/token")
+        .form(&params)
+        .send()
+        .await?;
+    if res.status().is_success() {
+        tracing::debug!("res success");
+        let token_res = res.json::<GoogleTokenRes>().await?;
+        tracing::debug!("token to struct");
+        let decoded_data =
+            jsonwebtoken::dangerous::insecure_decode::<GoogleClaims>(token_res.id_token)?;
+
+        let data = decoded_data.claims;
+
+        // tracing::debug!("{:#?}", data);
+        Ok(data)
+    } else {
+        // tracing::debug!("err google response: {}", res.text().await?);
+        Err(AppError::any_t_error("구글 인증에 실패했습니다"))
+    }
+}
+async fn set_token_cookie(
+    user: &UserDto,
+    db: &DatabaseConnection,
+) -> Result<Response<Body>, AppError> {
+    let (jwt, refresh) = create_token(user.id, user.username.clone(), db).await?;
+
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::SEE_OTHER;
+
+    let headers = response.headers_mut();
+    let jwt_val = format!("jwt={}; Path=/; HttpOnly", jwt);
+    let username_val = format!("username={}; Path=/; HttpOnly", user.username);
+    let refresh_val = format!("refresh={}; Path=/; HttpOnly", refresh);
+    headers.append(SET_COOKIE, HeaderValue::from_bytes(jwt_val.as_bytes())?);
+    headers.append(
+        SET_COOKIE,
+        HeaderValue::from_bytes(username_val.as_bytes())?,
+    );
+    headers.append(SET_COOKIE, HeaderValue::from_bytes(refresh_val.as_bytes())?);
+    headers.insert(LOCATION, HeaderValue::from_static("/"));
+
+    Ok(response)
+}
+
+#[utoipa::path(
+    path = "/google_login",
+    get,
+    tag = TAG,
+    params(
+        GoogleTokenReq
+    ),
+    responses(
+        (status = StatusCode::OK)
+    )
+)]
+#[debug_handler(state = AuthState)]
+pub async fn google_login(
+    State(reqwest): State<reqwest::Client>,
+    State(db): State<DatabaseConnection>,
+    Query(req): Query<GoogleTokenReq>,
+    TypedHeader(cookies): TypedHeader<axum_extra::headers::Cookie>,
+) -> Result<Response<Body>, AppError> {
+    // 시나리오
+    // 리디렉션을 통해서 로그인시도가 들어가고, username을 찾아서 정보를 가져옴
+    // reqwest로 구글 token을 가져오고, 해당 정보에서 유저 id를 찾아서, 데이터베이스에서 찾음
+    // 만약 찾는경우 로그인진행, 찾지 못한다면 회원가입 진행
+
+    let google_token = get_google_claims(reqwest.clone(), req, cookies).await?;
+
+    let user_condition = UserCondition {
+        username: Some(google_token.email),
+        google: Some(google_token.sub),
+        ..Default::default()
+    };
+
+    let mut user = UserDto::get_user(&user_condition, &db).await?;
+    if user.is_empty() {
+        user.push(user_condition.post_user(&db).await?);
+    }
+
+    set_token_cookie(&user[0], &db).await
+}
+
+#[utoipa::path(
+    path = "/google_update",
+    post,
+    tag = TAG,
+    request_body(
         content_type = mime::APPLICATION_JSON.as_ref()
     ),
     responses(
-        (status=StatusCode::OK, body=Tokens, example="jwt token")
+        (status = StatusCode::OK)
+    ),
+    security(
+        ("api_jwt_token" = [])
     )
 )]
-#[debug_handler]
-pub async fn login(
+#[debug_handler(state = AuthState)]
+pub async fn google_update(
+    State(reqwest): State<reqwest::Client>,
     State(db): State<DatabaseConnection>,
-    Json(request_user): Json<ReqUser>,
-) -> Result<Json<Tokens>, AppError> {
-    let user = users::Entity::find()
-        .filter(users::Column::Username.eq(&request_user.username))
-        .one(&db)
-        .await?;
+    Extension(id): Extension<CurrentUser>,
+    Query(req): Query<GoogleTokenReq>,
+    TypedHeader(cookies): TypedHeader<axum_extra::headers::Cookie>,
+) -> Result<Response<Body>, AppError> {
+    // 시나리오
+    // 리디렉션을 통해서 로그인시도가 들어가고, username을 찾아서 정보를 가져옴
+    // reqwest로 구글 token을 가져오고, 해당 정보에서 유저 id를 찾아서, 데이터베이스에서 찾음
+    // 유저 id와 이미 로그인되어있는 id가 일치한다면, 해당 정보를 user데이터베이스에 갱신
+    let google_token = get_google_claims(reqwest.clone(), req, cookies).await?;
+    let user_condition = UserCondition {
+        username: Some(google_token.email),
+        google: Some(google_token.sub.clone()),
+        ..Default::default()
+    };
 
-    match user {
-        Some(user) => {
-            let _ = verify_password(&request_user.password, &user.password)?;
-            let (jwt, refresh) = create_token(user.id, user.username.clone(), &db).await?;
+    let mut user = UserDto::get_user(&user_condition, &db).await?;
 
-            Ok(Json(Tokens {
-                jwt,
-                refresh,
-                user_info: crate::resources::dto::user::ReadUser {
-                    id: user.id,
-                    username: user.username,
-                },
-            }))
-        }
-        None => Err(DbErr::RecordNotFound(format!(
-            "{} user name not found!",
-            request_user.username
-        ))
-        .into()),
+    if user.is_empty() || id != user[0].id {
+        return Err(AppError::any_t_error(
+            "갱신할 수 있는 유저를 찾을 수 없거나 권한이 없습니다",
+        ));
     }
+
+    user[0].google = Some(google_token.sub);
+    user[0].clone().update_user(&db).await?;
+
+    set_token_cookie(&user[0], &db).await
 }
 
 #[utoipa::path(
@@ -152,10 +324,8 @@ async fn refresh(
             Ok(Json(Tokens {
                 jwt,
                 refresh,
-                user_info: crate::resources::dto::user::ReadUser {
-                    id: user_id,
-                    username,
-                },
+                user_id,
+                username,
             }))
         }
         // Lazy 스케줄러가 제거했을 것임
@@ -176,12 +346,22 @@ const TAG: &str = "AUTH";
 )]
 struct ApiDoc;
 
+#[derive(FromRef, Clone)]
+struct AuthState {
+    db: DatabaseConnection,
+    reqwest: reqwest::Client,
+}
+
 pub fn init_router(aex: AppExtension) -> Router {
     let open_router = OpenApiRouter::new()
-        .routes(routes!(login))
+        .routes(routes!(google_login))
         .routes(routes!(logout))
         .routes(routes!(refresh))
-        .with_state(aex.db.0.clone());
+        .routes(routes!(state_setting))
+        .with_state(AuthState {
+            db: aex.db.0,
+            reqwest: aex.reqwest.0,
+        });
 
     let (router, login_api) = open_router.split_for_parts();
     let mut api = ApiDoc::openapi();

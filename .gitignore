@@ -1,2 +1,3 @@
 **target/
-./env_files/*.env
+env_files/*.env
+*.env

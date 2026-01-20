@@ -13,29 +13,10 @@ use std::env;
 use tracing::debug;
 
 use crate::resources::{
-    dto::user::{JwtClaims, RefreshClaims},
+    dto::user::{CurrentUser, JwtClaims, RefreshClaims},
     entities::refresh_token,
 };
 use crate::utils::errors::AppError;
-
-#[derive(Clone)]
-pub struct CurrentUser(pub i32, pub String);
-impl PartialEq for CurrentUser {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-    fn ne(&self, other: &Self) -> bool {
-        self.0 != other.0
-    }
-}
-impl PartialEq<i32> for CurrentUser {
-    fn eq(&self, other: &i32) -> bool {
-        self.0 == *other
-    }
-    fn ne(&self, other: &i32) -> bool {
-        self.0 != *other
-    }
-}
 
 // jwt 시드
 lazy_static! {

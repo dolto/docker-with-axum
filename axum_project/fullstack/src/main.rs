@@ -18,7 +18,7 @@ fn main() {
     dioxus::serve(|| async move {
         use axum::Router;
         use router::api::{self, auth};
-        use router::hello::*;
+        // use router::hello::*;
 
         use crate::resources::dto::fullstack_extension;
         // use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
@@ -36,14 +36,14 @@ fn main() {
 
         let api_routers = api::init_route(fulex.clone());
         let ws_routers = ws::init_router(fulex.clone());
-        let hello_router = hello_router(fulex.clone());
+        // let hello_router = hello_router(fulex.clone());
         let login_router = auth::init_router(fulex.clone());
         let front_router = front::init_router(fulex.clone());
 
         let app = Router::new()
             .merge(api_routers)
             .merge(ws_routers)
-            .merge(hello_router)
+            // .merge(hello_router)
             .merge(login_router)
             .merge(front_router)
             .merge(dioxus::server::router(app));
